@@ -14,7 +14,7 @@ export function VitalleLoginForm() {
   const [state, formAction, isPending] = useActionState(adminLoginAction, initialState);
 
   return (
-    <form action={formAction} className="grid gap-4">
+    <form action={formAction} className="mx-auto grid max-w-[34rem] gap-6">
       <label className="grid gap-3 text-left">
         <span className="auth-label text-[var(--bone-60)]">Senha de acesso</span>
         <input

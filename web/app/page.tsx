@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { opsLoginAction } from '@/app/vitalle-actions';
 import { getSessionToken } from '@/lib/session';
@@ -18,17 +17,21 @@ export default async function HomePage() {
     <main className="auth-page">
       <section className="mx-auto flex min-h-screen w-full max-w-4xl items-center justify-center px-6 py-10">
         <div className="w-full max-w-md text-center">
-          <div className="flex flex-col items-center">
-            <Image src="/brand/vitalle-logo.png" alt="Vitalle Odontologia & Harmonização" width={738} height={177} priority className="auth-logo" />
+          <div className="auth-wordmark" aria-label="Vitalle Odontologia & Harmonização">
+            <div className="auth-tooth-mark">V</div>
+            <p className="display mt-7 text-[2.15rem] tracking-[0.22em] text-[var(--bone)]">VITALLE</p>
+            <p className="mt-4 text-[0.68rem] uppercase tracking-[0.42em] text-[var(--bone-40)]">
+              Odontologia & Harmonização
+            </p>
           </div>
 
-          <div className="mt-16 grid gap-4 sm:grid-cols-2">
+          <div className="mx-auto mt-16 grid max-w-[330px] grid-cols-2 gap-4">
             <Link href="/login" className="auth-choice">
-              <span className="display text-[2.05rem] tracking-[0.04em]">ADM</span>
+              <span className="display text-[1.8rem] tracking-[0.04em]">ADM</span>
             </Link>
             <form action={opsLoginAction}>
               <button type="submit" className="auth-choice">
-                <span className="display text-[2.05rem] tracking-[0.04em]">OPS</span>
+                <span className="display text-[1.8rem] tracking-[0.04em]">OPS</span>
               </button>
             </form>
           </div>

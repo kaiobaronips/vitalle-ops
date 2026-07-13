@@ -87,26 +87,26 @@ body {
 .auth-page {
   min-height: 100vh;
   background:
-    radial-gradient(circle at 50% 18%, rgba(201, 158, 103, 0.12), transparent 26%),
-    linear-gradient(180deg, #13100c 0%, #0f0c09 100%);
+    radial-gradient(circle at 50% 18%, rgba(201, 158, 103, 0.08), transparent 28%),
+    linear-gradient(180deg, #14110d 0%, #0f0c09 100%);
 }
 
-.brand-mark {
+.auth-wordmark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.auth-tooth-mark {
   display: grid;
   place-items: center;
-  width: 5rem;
-  height: 5rem;
-  border: 1px solid rgba(201, 158, 103, 0.38);
-  border-radius: 999px;
-  color: var(--accent);
+  width: 5.4rem;
+  height: 5.4rem;
+  color: var(--gold);
   font-family: var(--font-cormorant), Georgia, serif;
-  font-size: 2.6rem;
+  font-size: 4.2rem;
   line-height: 1;
-}
-
-.auth-logo {
-  width: min(82vw, 23rem);
-  height: auto;
+  text-shadow: 0 0 22px rgba(201, 158, 103, 0.1);
 }
 
 .auth-panel {
@@ -121,11 +121,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 6.75rem;
+  min-height: 5.45rem;
   width: 100%;
   border: 1px solid rgba(201, 158, 103, 0.32);
-  border-radius: 1.5rem;
-  background: linear-gradient(135deg, #e0c585 0%, #c99e67 100%);
+  border-radius: 1.25rem;
+  background: linear-gradient(135deg, #ddc78d 0%, #c99e67 100%);
   color: #13100c;
   text-decoration: none;
   transition:
@@ -148,8 +148,8 @@ body {
 }
 
 .auth-label {
-  font-size: 0.8rem;
-  letter-spacing: 0.22em;
+  font-size: 0.86rem;
+  letter-spacing: 0.26em;
   text-transform: uppercase;
   font-weight: 500;
 }
@@ -157,9 +157,9 @@ body {
 .auth-input {
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 1rem;
+  border-radius: 1.2rem;
   background: rgba(255, 255, 255, 0.02);
-  padding: 1rem 1.05rem;
+  padding: 1.25rem 1.35rem;
   color: var(--bone);
   font-size: 1rem;
   transition:
@@ -184,7 +184,7 @@ body {
   justify-content: center;
   min-height: 3.625rem;
   border: 0;
-  border-radius: 1rem;
+  border-radius: 1.2rem;
   background: linear-gradient(135deg, #d8b174 0%, #c99e67 100%);
   color: #13100c;
   font-weight: 600;
