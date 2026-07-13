@@ -96,8 +96,10 @@ def _resolve_scope(principal: APIPrincipal) -> dict[str, Any]:
     display_name = principal.display_name or user_context.get("display_name") or user_context.get("full_name") or principal.email or "Usuário"
     role = principal.role or user_context.get("role") or "collaborator"
     accessible_sector_ids = []
+    sectors = []
     if _is_admin_like(principal):
-        accessible_sector_ids = [sector["id"] for sector in list_sectors(unit_id)] if unit_id else []
+        sectors = list_sectors(unit_id) if unit_id else []
+        accessible_sector_ids = [sector["id"] for sector in sectors]
     elif principal.user_id:
         assignments = list_user_sector_assignments(principal.user_id)
         accessible_sector_ids = [assignment["sector_id"] for assignment in assignments]
@@ -113,6 +115,7 @@ def _resolve_scope(principal: APIPrincipal) -> dict[str, Any]:
         "organization_timezone": organization_timezone,
         "unit_timezone": unit_timezone,
         "accessible_sector_ids": accessible_sector_ids,
+        "sectors": sectors,
         "user_context": user_context,
         "admin_like": _is_admin_like(principal),
     }
@@ -275,7 +278,7 @@ def me(principal: APIPrincipal = Depends(_principal_guard)):
             "sector_ids": scope["accessible_sector_ids"],
             "admin_like": scope["admin_like"],
             "timezone": scope["unit_timezone"],
-            "sectors": list_sectors(scope["unit_id"]) if scope["unit_id"] else [],
+            "sectors": scope["sectors"] or (list_sectors(scope["unit_id"]) if scope["unit_id"] else []),
             "settings": list_system_settings(scope["unit_id"]) if scope["unit_id"] else [],
         }
     )
