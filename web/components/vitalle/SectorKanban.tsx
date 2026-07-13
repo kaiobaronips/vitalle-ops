@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { completeTaskAction, startTaskAction } from '@/app/vitalle-actions';
 import type { TaskInstance } from '@/lib/vitalle-types';
@@ -60,6 +60,7 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
   const [draggedTaskId, setDraggedTaskId] = useState<string>('');
   const [message, setMessage] = useState('');
   const [celebrating, setCelebrating] = useState(false);
+  const celebrationTimer = useRef<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const taskCountByColumn = useMemo(() => {
@@ -68,6 +69,21 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
       return acc;
     }, {});
   }, [columns, items]);
+
+  function showCelebration() {
+    if (celebrationTimer.current) {
+      window.clearTimeout(celebrationTimer.current);
+    }
+
+    setCelebrating(false);
+    window.requestAnimationFrame(() => {
+      setCelebrating(true);
+      celebrationTimer.current = window.setTimeout(() => {
+        setCelebrating(false);
+        celebrationTimer.current = null;
+      }, 2400);
+    });
+  }
 
   function moveTask(taskId: string, column: KanbanColumn) {
     const currentItem = items.find((item) => item.task.id === taskId);
@@ -86,6 +102,9 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
 
     setItems((current) => current.map((item) => (item.task.id === taskId ? { ...item, columnId: column.id } : item)));
     const task = currentItem.task;
+    if (column.kind === 'finished') {
+      showCelebration();
+    }
 
     startTransition(async () => {
       setMessage('');
@@ -99,12 +118,12 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
       if (!result.ok) {
         setMessage(result.message);
         setItems((current) => current.map((item) => (item.task.id === taskId ? { ...item, columnId: initialColumn(task) } : item)));
+        if (column.kind === 'finished' && celebrationTimer.current) {
+          window.clearTimeout(celebrationTimer.current);
+          celebrationTimer.current = null;
+          setCelebrating(false);
+        }
         return;
-      }
-
-      if (column.kind === 'finished') {
-        setCelebrating(true);
-        window.setTimeout(() => setCelebrating(false), 1300);
       }
 
       if (column.kind === 'doing' || column.kind === 'finished') {

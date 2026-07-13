@@ -278,7 +278,7 @@ body {
   height: 11rem;
   width: 11rem;
   place-items: center;
-  animation: celebration-pop 980ms cubic-bezier(0.2, 1, 0.2, 1) both;
+  animation: celebration-pop 2400ms cubic-bezier(0.2, 1, 0.2, 1) both;
 }
 
 .celebration-burst strong {
@@ -301,7 +301,7 @@ body {
   border-radius: 999px;
   background: var(--gold);
   transform: translate(-50%, -50%);
-  animation: celebration-ray 980ms cubic-bezier(0.2, 1, 0.2, 1) both;
+  animation: celebration-ray 1500ms cubic-bezier(0.2, 1, 0.2, 1) both;
 }
 
 .celebration-burst span:nth-child(1) { --x: 0rem; --y: -4.9rem; }
@@ -320,9 +320,17 @@ body {
     opacity: 1;
     transform: scale(1.08);
   }
+  28% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  78% {
+    opacity: 1;
+    transform: scale(1);
+  }
   100% {
     opacity: 0;
-    transform: scale(1);
+    transform: scale(0.96);
   }
 }
 
