@@ -305,6 +305,27 @@ export type HistoryItem = {
   overdue_tasks: number;
   blocked_tasks: number;
   not_applicable_tasks: number;
+  sectors?: Array<{
+    operational_date: string;
+    sector_id: string;
+    sector_name: string;
+    total_tasks: number;
+    completed_tasks: number;
+    overdue_tasks: number;
+    blocked_tasks: number;
+    tasks: Array<{
+      id: string;
+      title: string;
+      status: string;
+      scheduled_start: string;
+      scheduled_due: string;
+      completed_at?: string | null;
+      is_late?: boolean;
+      blocker_reason?: string;
+      blocker_details?: string;
+      completion_comment?: string;
+    }>;
+  }>;
 };
 
 export type AuditEvent = {

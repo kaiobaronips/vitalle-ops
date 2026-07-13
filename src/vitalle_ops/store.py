@@ -1922,7 +1922,69 @@ def list_history(unit_id: str, start_date: date | None = None, end_date: date | 
                     limit,
                 ),
             )
-            return [dict(row) for row in cur.fetchall()]
+            history = [dict(row) for row in cur.fetchall()]
+            if not history:
+                return []
+            dates = [row["operational_date"] for row in history]
+            cur.execute(
+                """
+                select
+                    dti.operational_date,
+                    dti.sector_id,
+                    coalesce(s.name, dti.sector_name_snapshot) as sector_name,
+                    count(dti.id) as total_tasks,
+                    count(*) filter (where dti.status in (%s, %s, %s)) as completed_tasks,
+                    count(*) filter (where dti.status = %s or dti.is_late = true) as overdue_tasks,
+                    count(*) filter (where dti.status = %s) as blocked_tasks
+                from daily_task_instances dti
+                left join sectors s on s.id = dti.sector_id
+                where dti.unit_id = %s and dti.operational_date = any(%s)
+                group by dti.operational_date, dti.sector_id, coalesce(s.name, dti.sector_name_snapshot)
+                order by dti.operational_date desc, sector_name asc
+                """,
+                (
+                    TASK_STATUS_COMPLETED,
+                    TASK_STATUS_JUSTIFIED,
+                    TASK_STATUS_NOT_APPLICABLE,
+                    TASK_STATUS_OVERDUE,
+                    TASK_STATUS_BLOCKED,
+                    unit_id,
+                    dates,
+                ),
+            )
+            sector_rows = [dict(row) for row in cur.fetchall()]
+            cur.execute(
+                """
+                select
+                    dti.operational_date,
+                    dti.sector_id,
+                    dti.id,
+                    dti.title_snapshot as title,
+                    dti.status,
+                    dti.scheduled_start,
+                    dti.scheduled_due,
+                    dti.completed_at,
+                    dti.is_late,
+                    dti.blocker_reason,
+                    dti.blocker_details,
+                    dti.completion_comment
+                from daily_task_instances dti
+                where dti.unit_id = %s and dti.operational_date = any(%s)
+                order by dti.operational_date desc, dti.sector_id asc, dti.scheduled_start asc, dti.title_snapshot asc
+                """,
+                (unit_id, dates),
+            )
+            task_rows = [dict(row) for row in cur.fetchall()]
+            tasks_by_key: dict[tuple[date, str], list[dict[str, Any]]] = {}
+            for task in task_rows:
+                tasks_by_key.setdefault((task["operational_date"], task["sector_id"]), []).append(task)
+            sectors_by_date: dict[date, list[dict[str, Any]]] = {}
+            for sector in sector_rows:
+                sector["tasks"] = tasks_by_key.get((sector["operational_date"], sector["sector_id"]), [])
+                sectors_by_date.setdefault(sector["operational_date"], []).append(sector)
+            for row in history:
+                row["sectors"] = sectors_by_date.get(row["operational_date"], [])
+            return history
 
 
 def list_daily_operation_tasks_for_date(unit_id: str, operational_date: date) -> list[dict[str, Any]]:

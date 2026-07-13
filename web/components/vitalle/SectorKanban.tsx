@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { completeTaskAction, startTaskAction } from '@/app/vitalle-actions';
 import type { TaskInstance } from '@/lib/vitalle-types';
 
-type ColumnKind = 'todo' | 'doing' | 'done' | 'finished' | 'custom';
+type ColumnKind = 'todo' | 'doing' | 'finished' | 'custom';
 
 type KanbanColumn = {
   id: string;
@@ -21,14 +21,13 @@ type TaskBoardItem = {
 const defaultColumns: KanbanColumn[] = [
   { id: 'todo', title: 'Tarefas', kind: 'todo' },
   { id: 'doing', title: 'Em andamento', kind: 'doing' },
-  { id: 'done', title: 'Realizadas', kind: 'done' },
   { id: 'finished', title: 'Finalizadas', kind: 'finished' },
 ];
 
 function initialColumn(task: TaskInstance) {
   const status = task.status.toUpperCase();
   if (status === 'IN_PROGRESS') return 'doing';
-  if (['COMPLETED', 'JUSTIFIED', 'NOT_APPLICABLE'].includes(status)) return 'done';
+  if (['COMPLETED', 'JUSTIFIED', 'NOT_APPLICABLE'].includes(status)) return 'finished';
   return 'todo';
 }
 
@@ -60,6 +59,7 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
   const [newColumnTitle, setNewColumnTitle] = useState('');
   const [draggedTaskId, setDraggedTaskId] = useState<string>('');
   const [message, setMessage] = useState('');
+  const [celebrating, setCelebrating] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const taskCountByColumn = useMemo(() => {
@@ -79,7 +79,7 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
       const result =
         column.kind === 'doing'
           ? await startTaskAction(actionFormData(taskId))
-          : column.kind === 'done' || column.kind === 'finished'
+          : column.kind === 'finished'
             ? await completeTaskAction(actionFormData(taskId, 'Concluída pelo Kanban.'))
             : { ok: true, message: '' };
 
@@ -89,15 +89,20 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
         return;
       }
 
-      if (column.kind === 'doing' || column.kind === 'done' || column.kind === 'finished') {
+      if (column.kind === 'finished') {
+        setCelebrating(true);
+        window.setTimeout(() => setCelebrating(false), 1300);
+      }
+
+      if (column.kind === 'doing' || column.kind === 'finished') {
         router.refresh();
       }
     });
   }
 
   function completeTask(taskId: string) {
-    const doneColumn = columns.find((column) => column.kind === 'done') ?? defaultColumns[2];
-    moveTask(taskId, doneColumn);
+    const finishedColumn = columns.find((column) => column.kind === 'finished') ?? defaultColumns[2];
+    moveTask(taskId, finishedColumn);
   }
 
   function createColumn() {
@@ -110,6 +115,20 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
 
   return (
     <section className="space-y-5">
+      {celebrating ? (
+        <div className="pointer-events-none fixed inset-0 z-[100] grid place-items-center">
+          <div className="celebration-burst">
+            <span />
+            <span />
+            <span />
+            <span />
+            <span />
+            <span />
+            <strong>Parabéns!</strong>
+          </div>
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow text-[var(--stone)]">Kanban operacional</p>
@@ -174,9 +193,9 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
                         <button
                           type="button"
                           onClick={() => completeTask(task.id)}
-                          disabled={isPending || column.kind === 'done' || column.kind === 'finished'}
+                          disabled={isPending || column.kind === 'finished'}
                           className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md border text-sm transition ${
-                            column.kind === 'done' || column.kind === 'finished'
+                            column.kind === 'finished'
                               ? 'border-[var(--gold)] bg-[var(--gold)] text-[#14110d]'
                               : 'border-[#cfc7bd] bg-[#fbf9f5] text-transparent hover:border-[var(--gold)] hover:text-[var(--gold)]'
                           }`}
