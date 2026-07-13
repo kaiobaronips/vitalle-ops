@@ -185,8 +185,8 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
 
       {message ? <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{message}</p> : null}
 
-      <div className="overflow-x-auto pb-3">
-        <div className="grid min-h-[32rem] min-w-[1120px] grid-flow-col auto-cols-[minmax(280px,1fr)] gap-3">
+      <div className="pb-3">
+        <div className="grid min-h-[32rem] grid-cols-1 gap-3 lg:grid-cols-3">
           {columns.map((column) => (
             <article
               key={column.id}
@@ -196,11 +196,11 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
                 const taskId = draggedTaskId || event.dataTransfer.getData('text/plain');
                 if (taskId) moveTask(taskId, column);
               }}
-              className="rounded-2xl border border-[#ece5da] bg-[#f4f2f0] p-3"
+              className="min-w-0 rounded-2xl border border-[#ece5da] bg-[#f4f2f0] p-2.5"
             >
               <header className="mb-3">
                 <div className="flex items-start justify-between gap-3">
-                  <h3 className="text-lg font-semibold text-[#252525]">{column.title}</h3>
+                  <h3 className="text-base font-semibold text-[#252525]">{column.title}</h3>
                   <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-[var(--stone)]">
                     {taskCountByColumn[column.id] ?? 0}
                   </span>
@@ -219,7 +219,7 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
                         event.dataTransfer.setData('text/plain', task.id);
                       }}
                       onDragEnd={() => setDraggedTaskId('')}
-                      className="group rounded-lg border border-[#ded8cf] bg-white p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                      className="group rounded-lg border border-[#ded8cf] bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                     >
                       <div className="flex items-start gap-3">
                         <button
