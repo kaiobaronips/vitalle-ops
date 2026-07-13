@@ -59,8 +59,25 @@ function SummaryTaskList({ tasks }: { tasks: TaskInstance[] }) {
 }
 
 export default async function DashboardPage() {
-  const [meResult, dashboardResult] = await Promise.all([getVitalleMe(), getVitalleDashboard()]);
+  const meResult = await getVitalleMe();
   const me = meResult.data;
+
+  if (!me.admin_like) {
+    return (
+      <OpsShell principal={me} title="OPS" subtitle="Seleção de setor">
+        <section className="flex min-h-[calc(100vh-13rem)] items-center justify-center">
+          <article className="max-w-md rounded-2xl border border-[var(--line)] bg-[var(--paper)] px-8 py-10 text-center">
+            <p className="display text-2xl leading-snug text-[var(--noir)]">
+              Selecione qual o seu setor para iniciar o dia, tenha um otimo dia
+            </p>
+            <div className="gold-rule mx-auto mt-6 w-24" />
+          </article>
+        </section>
+      </OpsShell>
+    );
+  }
+
+  const dashboardResult = await getVitalleDashboard();
   const dashboard = dashboardResult.data;
   const currentDayProgress = dashboard.task_counts.total > 0 ? Math.round((dashboard.task_counts.completed / dashboard.task_counts.total) * 100) : 0;
   const criticalTasks = dashboard.tasks.filter((task) => task.is_critical_snapshot && (task.is_late || task.status === 'BLOCKED' || task.status === 'PENDING')).slice(0, 4);
