@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useEffect, useMemo, useState } from 'react';
-import { saveTaskTemplateAction, type ActionState } from '@/app/vitalle-actions';
+import { archiveTaskAction, saveTaskTemplateAction, type ActionState } from '@/app/vitalle-actions';
 import type { Sector, TaskTemplate } from '@/lib/vitalle-types';
 
 const initialActionState: ActionState = { ok: false, message: '' };
@@ -163,7 +163,15 @@ function TaskTemplateCard({ task }: { task: TaskTemplate }) {
         <span>
           {shortTime(task.start_time)} - {shortTime(task.due_time)}
         </span>
-        <span className="rounded-full bg-[#f6f1ea] px-2.5 py-1 text-[#6f655b]">Diária</span>
+        <form action={archiveTaskAction as unknown as (formData: FormData) => void}>
+          <input type="hidden" name="id" value={task.id} />
+          <button
+            type="submit"
+            className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[0.68rem] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+          >
+            Remover
+          </button>
+        </form>
       </div>
     </div>
   );
@@ -179,6 +187,7 @@ export function AdminSectorTaskBoard({
   const [selectedSector, setSelectedSector] = useState<Sector | null>(null);
   const tasksBySector = useMemo(() => {
     return tasks.reduce<Record<string, TaskTemplate[]>>((acc, task) => {
+      if (task.active === false || task.archived_at) return acc;
       acc[task.sector_id] = [...(acc[task.sector_id] ?? []), task];
       return acc;
     }, {});
