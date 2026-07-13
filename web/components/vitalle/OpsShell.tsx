@@ -149,6 +149,9 @@ export function OpsShell({ children, principal, title, subtitle, accentLabel: _a
           <Link href="/" className="block rounded-xl bg-[var(--bone)] px-4 py-3">
             <Image src="/brand/vitalle-logo.png" alt="Vitalle Odontologia & Harmonização" width={738} height={177} priority className="h-auto w-full" />
           </Link>
+          <p className="mt-4 text-center text-[0.68rem] font-medium uppercase tracking-[0.24em] text-[var(--bone-40)]">
+            Dashboard Operacional
+          </p>
         </div>
 
         <nav className="flex-1 space-y-1 px-4 py-8">
