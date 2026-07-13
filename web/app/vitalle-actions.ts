@@ -12,6 +12,7 @@ import {
   completeVitalleTask,
   duplicateVitalleTaskTemplate,
   markVitalleTaskNotApplicable,
+  removeVitalleDailyTask,
   reopenVitalleTask,
   resolveVitalleAlert,
   saveVitalleSector,
@@ -348,6 +349,13 @@ export async function completeTaskAction(formData: FormData): Promise<ActionStat
   if (!result.ok) return { ok: false, message: result.message };
   await revalidateVitalle();
   return { ok: true, message: 'Tarefa concluída.' };
+}
+
+export async function removeDailyTaskAction(formData: FormData): Promise<ActionState> {
+  const result = await removeVitalleDailyTask(text(formData, 'id'));
+  if (!result.ok) return { ok: false, message: result.message };
+  await revalidateVitalle();
+  return { ok: true, message: 'Tarefa removida.' };
 }
 
 export async function blockTaskAction(formData: FormData): Promise<ActionState> {

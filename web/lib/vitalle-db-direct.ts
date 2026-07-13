@@ -2,7 +2,7 @@ import 'server-only';
 
 import { Pool, type PoolClient } from 'pg';
 import { getVitalleDevSession } from './vitalle-session';
-import type { PageResponse, PrincipalContext, Sector, SystemSetting, TaskTemplate } from './vitalle-types';
+import type { PageResponse, PrincipalContext, Sector, SystemSetting, TaskInstance, TaskTemplate } from './vitalle-types';
 
 const organizationId = 'vitalle-odontologia';
 const unitId = 'vitalle-main';
@@ -359,4 +359,19 @@ export async function saveDirectTaskTemplate(payload: Record<string, unknown>): 
   const template = templates.items.find((item) => item.id === id);
   if (!template) throw new Error('Tarefa salva, mas não foi possível recarregar o registro.');
   return template;
+}
+
+export async function deleteDirectDailyTask(taskId: string): Promise<TaskInstance> {
+  const rows = await query<TaskInstance>(
+    `
+    delete from daily_task_instances
+    where id::text = $1
+      and unit_id = $2
+    returning *
+    `,
+    [taskId, unitId],
+  );
+  const task = rows[0];
+  if (!task) throw new Error('Tarefa não encontrada.');
+  return task;
 }

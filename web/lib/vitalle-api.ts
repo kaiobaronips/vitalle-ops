@@ -1,6 +1,7 @@
 import { getVitalleAuthHeaders } from './vitalle-session';
 import {
   canUseDirectDatabase,
+  deleteDirectDailyTask,
   getDirectMe,
   getDirectSectors,
   getDirectTaskTemplates,
@@ -286,6 +287,18 @@ export async function startVitalleTask(taskId: string): Promise<ApiMutationResul
 
 export async function completeVitalleTask(taskId: string, comment = ''): Promise<ApiMutationResult<TaskInstance>> {
   return mutate<TaskInstance>(`/v1/vitalle/tarefas/${taskId}/concluir`, 'POST', { comment });
+}
+
+export async function removeVitalleDailyTask(taskId: string): Promise<ApiMutationResult<TaskInstance>> {
+  if (canUseDirectDatabase()) {
+    try {
+      const data = await deleteDirectDailyTask(taskId);
+      return { ok: true, status: 200, data, message: 'Operação concluída.' };
+    } catch (error) {
+      console.warn('vitalle_direct_db_mutation_failed', 'daily_task_instances.delete', error);
+    }
+  }
+  return mutate<TaskInstance>(`/v1/vitalle/tarefas/${taskId}`, 'DELETE');
 }
 
 export async function blockVitalleTask(taskId: string, reasonType: string, details: string): Promise<ApiMutationResult<Record<string, unknown>>> {
