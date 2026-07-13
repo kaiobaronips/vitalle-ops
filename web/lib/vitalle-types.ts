@@ -50,6 +50,7 @@ export type Sector = {
   icon?: string;
   status?: string;
   sort_order?: number;
+  metadata_json?: Record<string, unknown>;
   task_count?: number;
   completed_count?: number;
   overdue_count?: number;

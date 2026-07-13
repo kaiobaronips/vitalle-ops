@@ -220,6 +220,7 @@ class SectorInput(BaseModel):
     slug: str | None = None
     description: str = ""
     responsible_user_id: str | None = None
+    responsible_name: str = ""
     color: str = "#0f766e"
     icon: str = "building-2"
     status: str = "active"
@@ -534,6 +535,7 @@ def admin_salvar_setor(payload: SectorInput, principal: APIPrincipal = Depends(_
             "icon": payload.icon,
             "status": payload.status,
             "sort_order": payload.sort_order,
+            "metadata_json": {"responsible_name": payload.responsible_name},
         }
     )
     return _success(sector)

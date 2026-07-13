@@ -263,7 +263,7 @@ export async function saveSectorAction(_previous: ActionState, formData: FormDat
     name: text(formData, 'name'),
     slug: text(formData, 'slug') || undefined,
     description: text(formData, 'description'),
-    responsible_user_id: text(formData, 'responsible_user_id') || undefined,
+    responsible_name: text(formData, 'responsible_name'),
     color: text(formData, 'color') || '#0f766e',
     icon: text(formData, 'icon') || 'building-2',
     status: text(formData, 'status') || 'active',

@@ -195,12 +195,12 @@ export function TaskTemplateForm({
 
 export function SectorForm({
   sector,
-  users,
 }: {
   sector?: Sector;
-  users: Array<Record<string, unknown>>;
 }) {
   const selectedIcon = sector?.icon ?? 'building-2';
+  const metadataResponsibleName = typeof sector?.metadata_json?.responsible_name === 'string' ? sector.metadata_json.responsible_name : '';
+  const responsibleName = sector?.responsible_display_name ?? sector?.responsible_name ?? metadataResponsibleName;
   return (
     <form action={saveSectorAction as unknown as (formData: FormData) => void} className="grid gap-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
       <input type="hidden" name="id" value={sector?.id ?? ''} />
@@ -212,14 +212,7 @@ export function SectorForm({
           <input name="name" defaultValue={sector?.name ?? ''} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
         </Field>
         <Field label="Responsável pelo setor">
-          <select name="responsible_user_id" defaultValue={sector?.responsible_user_id ?? ''} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
-            <option value="">Setor sem responsável</option>
-            {users.map((user) => (
-              <option key={String(user.id)} value={String(user.id)}>
-                {String(user.full_name ?? user.display_name ?? user.email ?? user.id)}
-              </option>
-            ))}
-          </select>
+          <input name="responsible_name" defaultValue={responsibleName ?? ''} placeholder="Digite o nome do responsável" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
         </Field>
         <Field label="Status">
           <select name="status" defaultValue={sector?.status ?? 'active'} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
