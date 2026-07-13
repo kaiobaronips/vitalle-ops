@@ -10,7 +10,7 @@ export default async function NovaTarefaPage() {
   const sectors = sectorsResult.data.items ?? [];
 
   return (
-    <OpsShell principal={me} title="Nova tarefa" subtitle="Crie um POP recorrente com horário, meta e subtarefas.">
+    <OpsShell principal={me} title="Nova Tarefa" subtitle="Crie uma tarefa diária para um setor.">
       <TaskTemplateForm sectors={sectors} />
     </OpsShell>
   );

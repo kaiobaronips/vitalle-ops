@@ -1,8 +1,5 @@
 import type { ReactNode } from 'react';
 import {
-  activateTaskAction,
-  archiveTaskAction,
-  duplicateTaskAction,
   saveSectorAction,
   saveSettingAction,
   saveTaskTemplateAction,
@@ -90,6 +87,18 @@ function SectorIconPreview({ value }: { value: string }) {
   return <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">{paths[value] ?? paths['building-2']}</svg>;
 }
 
+function toTime(value?: string | null) {
+  return value ? String(value).slice(0, 5) : '';
+}
+
+function csv(value?: number[] | string[] | null) {
+  return (value ?? []).join(', ');
+}
+
+function taskTemplateSubtasks(template?: TaskTemplate) {
+  return (template?.subtasks ?? []).map((subtask) => subtask.title).join('\n');
+}
+
 function Toggle({
   name,
   label,
@@ -112,18 +121,6 @@ function Toggle({
   );
 }
 
-function toTime(value?: string | null) {
-  return value ? String(value).slice(0, 5) : '';
-}
-
-function csv(value?: number[] | string[] | null) {
-  return (value ?? []).join(', ');
-}
-
-function taskTemplateSubtasks(template?: TaskTemplate) {
-  return (template?.subtasks ?? []).map((subtask) => subtask.title).join('\n');
-}
-
 export function TaskTemplateForm({
   template,
   sectors,
@@ -134,10 +131,27 @@ export function TaskTemplateForm({
   return (
     <form action={saveTaskTemplateAction as unknown as (formData: FormData) => void} className="grid gap-5 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
       <input type="hidden" name="id" value={template?.id ?? ''} />
+      <input type="hidden" name="task_type" value={template?.task_type ?? 'STANDARD'} />
+      <input type="hidden" name="default_assignee_id" value={template?.default_assignee_id ?? ''} />
+      <input type="hidden" name="priority" value={template?.priority ?? 'NORMAL'} />
+      <input type="hidden" name="goal_target" value={template?.goal_target ?? ''} />
+      <input type="hidden" name="goal_unit" value={template?.goal_unit ?? ''} />
+      <input type="hidden" name="goal_group_key" value={template?.goal_group_key ?? ''} />
+      <input type="hidden" name="interval_value" value="1" />
+      <input type="hidden" name="weekdays" value={csv(template?.weekdays)} />
+      <input type="hidden" name="month_days" value={csv(template?.month_days)} />
+      <input type="hidden" name="weeks_of_month" value={csv(template?.weeks_of_month)} />
+      <input type="hidden" name="end_date" value={template?.end_date ?? ''} />
+      <input type="hidden" name="instructions" value={template?.instructions ?? ''} />
+      <input type="hidden" name="subtasks" value={taskTemplateSubtasks(template)} />
+      <input type="hidden" name="is_critical" value={template?.is_critical ? 'on' : ''} />
+      <input type="hidden" name="requires_comment_on_completion" value={template?.requires_comment_on_completion ? 'on' : ''} />
+      <input type="hidden" name="requires_evidence" value={template?.requires_evidence ? 'on' : ''} />
+      <input type="hidden" name="requires_manager_review" value={template?.requires_manager_review ? 'on' : ''} />
+      <input type="hidden" name="allow_not_applicable" value={template?.allow_not_applicable === false ? 'off' : 'on'} />
+      <input type="hidden" name="is_conditional" value={template?.is_conditional ? 'on' : ''} />
+      <input type="hidden" name="active" value={template?.active === false ? 'off' : 'on'} />
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Título">
-          <input name="title" defaultValue={template?.title ?? ''} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
-        </Field>
         <Field label="Setor">
           <select name="sector_id" defaultValue={template?.sector_id ?? sectors[0]?.id ?? ''} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
             {sectors.map((sector) => (
@@ -147,107 +161,33 @@ export function TaskTemplateForm({
             ))}
           </select>
         </Field>
-        <Field label="Tipo de tarefa">
-          <select name="task_type" defaultValue={template?.task_type ?? 'STANDARD'} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
-            {['STANDARD', 'GOAL', 'CHECKLIST', 'CONDITIONAL', 'REVIEW', 'CLOSING', 'OPENING'].map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Responsável padrão">
-          <input name="default_assignee_id" defaultValue={template?.default_assignee_id ?? ''} placeholder="user-id" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
+        <Field label="Título">
+          <input name="title" defaultValue={template?.title ?? ''} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
         </Field>
         <Field label="Horário de início">
           <input name="start_time" type="time" defaultValue={toTime(template?.start_time)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
         </Field>
-        <Field label="Prazo">
+        <Field label="Horário do fim">
           <input name="due_time" type="time" defaultValue={toTime(template?.due_time)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
-        </Field>
-        <Field label="Criticidade">
-          <select name="priority" defaultValue={template?.priority ?? 'NORMAL'} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
-            {['LOW', 'NORMAL', 'HIGH', 'CRITICAL'].map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Meta quantitativa">
-          <input name="goal_target" type="number" min="0" defaultValue={template?.goal_target ?? ''} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
-        </Field>
-        <Field label="Unidade da meta">
-          <input name="goal_unit" defaultValue={template?.goal_unit ?? ''} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
-        </Field>
-        <Field label="Chave da meta">
-          <input name="goal_group_key" defaultValue={template?.goal_group_key ?? ''} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
         </Field>
         <Field label="Recorrência">
           <select name="recurrence_type" defaultValue={template?.recurrence_type ?? 'DAILY'} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
-            {['DAILY', 'WEEKDAYS', 'WEEKLY', 'MONTHLY', 'CUSTOM', 'SPECIFIC_WEEKDAYS'].map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
+            <option value="DAILY">Diária</option>
           </select>
         </Field>
-        <Field label="Dias da semana" hint="CSV com números ISO, ex: 1, 3, 5">
-          <input name="weekdays" defaultValue={csv(template?.weekdays)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
-        </Field>
-        <Field label="Dias do mês" hint="CSV, ex: 1, 15, 30">
-          <input name="month_days" defaultValue={csv(template?.month_days)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
-        </Field>
-        <Field label="Semanas do mês" hint="CSV, ex: 1, 3">
-          <input name="weeks_of_month" defaultValue={csv(template?.weeks_of_month)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
-        </Field>
-        <Field label="Data inicial">
+        <Field label="Data de início">
           <input name="start_date" type="date" defaultValue={template?.start_date ?? ''} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
         </Field>
-        <Field label="Data final">
-          <input name="end_date" type="date" defaultValue={template?.end_date ?? ''} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
-        </Field>
       </div>
 
-      <Field label="Descrição">
-        <textarea name="description" defaultValue={template?.description ?? ''} rows={4} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
+      <Field label="Descrição da tarefa">
+        <textarea name="description" defaultValue={template?.description ?? ''} rows={10} className="min-h-56 rounded-lg border border-slate-300 bg-white px-3 py-3 text-sm leading-6" />
       </Field>
 
-      <Field label="Instruções">
-        <textarea name="instructions" defaultValue={template?.instructions ?? ''} rows={4} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
-      </Field>
-
-      <Field label="Subtarefas" hint="Uma por linha">
-        <textarea name="subtasks" defaultValue={taskTemplateSubtasks(template)} rows={8} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
-      </Field>
-
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        <Toggle name="is_critical" label="Tarefa crítica" defaultChecked={template?.is_critical ?? false} />
-        <Toggle name="requires_comment_on_completion" label="Exigir comentário" defaultChecked={template?.requires_comment_on_completion ?? false} />
-        <Toggle name="requires_evidence" label="Exigir evidência" defaultChecked={template?.requires_evidence ?? false} />
-        <Toggle name="requires_manager_review" label="Exigir revisão" defaultChecked={template?.requires_manager_review ?? false} />
-        <Toggle name="allow_not_applicable" label="Permitir não aplicável" defaultChecked={template?.allow_not_applicable ?? true} />
-        <Toggle name="is_conditional" label="Tarefa condicional" defaultChecked={template?.is_conditional ?? false} />
-        <Toggle name="active" label="Ativa" defaultChecked={template?.active ?? true} />
-      </div>
-
-      <div className="flex flex-wrap gap-2">
+      <div>
         <button type="submit" className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white">
           Salvar tarefa
         </button>
-        {template?.id ? (
-          <>
-            <button formAction={duplicateTaskAction as unknown as (formData: FormData) => void} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
-              Duplicar
-            </button>
-            <button formAction={archiveTaskAction as unknown as (formData: FormData) => void} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
-              Arquivar
-            </button>
-            <button formAction={activateTaskAction as unknown as (formData: FormData) => void} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
-              Ativar
-            </button>
-          </>
-        ) : null}
       </div>
     </form>
   );
