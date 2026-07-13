@@ -184,7 +184,7 @@ export async function logoutAction(): Promise<void> {
   cookieStore.delete(sessionCookieName);
   cookieStore.delete(refreshCookieName);
   cookieStore.delete(vitalleDevSessionCookieName);
-  redirect('/login');
+  redirect('/');
 }
 
 export async function syncOperationAction(): Promise<ActionState> {
