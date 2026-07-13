@@ -186,42 +186,44 @@ export function AdminSectorTaskBoard({
 
   return (
     <>
-      <section className="grid min-h-[32rem] grid-cols-1 gap-3 lg:grid-cols-3">
-        {sectors.map((sector) => {
-          const sectorTasks = tasksBySector[sector.id] ?? [];
-          return (
-            <article key={sector.id} className="min-w-0 rounded-2xl border border-[#ece5da] bg-[#f4f2f0] p-2.5">
-              <header className="mb-3 flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h3 className="truncate text-base font-semibold text-[#252525]">{sector.name}</h3>
-                  {sector.description ? (
-                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">{sector.description}</p>
-                  ) : null}
-                  <p className="mt-1 text-xs font-semibold text-slate-500">{sectorTasks.length} tarefa(s)</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedSector(sector)}
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-950 text-xl leading-none text-white shadow-sm transition hover:bg-[var(--gold)] hover:text-[#14110d]"
-                  aria-label={`Criar tarefa para ${sector.name}`}
-                  title={`Criar tarefa para ${sector.name}`}
-                >
-                  +
-                </button>
-              </header>
-
-              <div className="grid gap-3">
-                {sectorTasks.length ? (
-                  sectorTasks.map((task) => <TaskTemplateCard key={task.id} task={task} />)
-                ) : (
-                  <div className="rounded-lg border border-dashed border-[#d8d0c4] bg-white/70 p-4 text-sm text-slate-500">
-                    Nenhuma tarefa cadastrada neste setor.
+      <section className="overflow-x-auto pb-3">
+        <div className="grid min-h-[32rem] grid-flow-col auto-cols-[minmax(18rem,calc(100vw-2.5rem))] gap-3 sm:auto-cols-[20rem] xl:auto-cols-[22rem]">
+          {sectors.map((sector) => {
+            const sectorTasks = tasksBySector[sector.id] ?? [];
+            return (
+              <article key={sector.id} className="min-w-0 rounded-2xl border border-[#ece5da] bg-[#f4f2f0] p-2.5">
+                <header className="mb-3 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="truncate text-base font-semibold text-[#252525]">{sector.name}</h3>
+                    {sector.description ? (
+                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">{sector.description}</p>
+                    ) : null}
+                    <p className="mt-1 text-xs font-semibold text-slate-500">{sectorTasks.length} tarefa(s)</p>
                   </div>
-                )}
-              </div>
-            </article>
-          );
-        })}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSector(sector)}
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-950 text-xl leading-none text-white shadow-sm transition hover:bg-[var(--gold)] hover:text-[#14110d]"
+                    aria-label={`Criar tarefa para ${sector.name}`}
+                    title={`Criar tarefa para ${sector.name}`}
+                  >
+                    +
+                  </button>
+                </header>
+
+                <div className="grid gap-3">
+                  {sectorTasks.length ? (
+                    sectorTasks.map((task) => <TaskTemplateCard key={task.id} task={task} />)
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-[#d8d0c4] bg-white/70 p-4 text-sm text-slate-500">
+                      Nenhuma tarefa cadastrada neste setor.
+                    </div>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </div>
       </section>
 
       {selectedSector ? (
