@@ -195,8 +195,8 @@ export function AdminSectorTaskBoard({
                 <header className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <h3 className="truncate text-base font-semibold text-[#252525]">{sector.name}</h3>
-                    <div className="mt-2 min-h-28 rounded-lg border border-[#e5ded3] bg-white/80 px-3 py-2 shadow-sm">
-                      <p className="whitespace-normal break-words text-xs leading-5 text-slate-700">
+                    <div className="mt-2 min-h-28 rounded-lg border border-[#14110d] bg-[#14110d] px-3 py-2 shadow-sm">
+                      <p className="whitespace-normal break-words text-xs leading-5 text-white">
                         {sector.description || 'Descrição do setor não informada.'}
                       </p>
                     </div>
