@@ -13,17 +13,18 @@ export function MetricCard({
   tone?: 'slate' | 'emerald' | 'amber' | 'blue' | 'rose';
 }) {
   const toneClasses: Record<typeof tone, string> = {
-    slate: 'border-slate-200 bg-white text-slate-950',
-    emerald: 'border-emerald-200 bg-emerald-50 text-emerald-950',
-    amber: 'border-amber-200 bg-amber-50 text-amber-950',
-    blue: 'border-blue-200 bg-blue-50 text-blue-950',
-    rose: 'border-rose-200 bg-rose-50 text-rose-950',
+    slate: 'border-[var(--line)] bg-[var(--paper)] text-[var(--noir)]',
+    emerald: 'border-[var(--line)] bg-[var(--paper)] text-[var(--noir)]',
+    amber: 'border-[var(--line)] bg-[var(--paper)] text-[var(--noir)]',
+    blue: 'border-[var(--line)] bg-[var(--paper)] text-[var(--noir)]',
+    rose: 'border-[var(--line)] bg-[var(--paper)] text-[var(--noir)]',
   };
   return (
-    <article className={`rounded-lg border p-4 shadow-sm ${toneClasses[tone]}`}>
-      <div className="text-xs font-semibold uppercase tracking-wide opacity-70">{label}</div>
-      <div className="mt-2 text-3xl font-semibold tracking-tight">{value}</div>
-      {detail ? <div className="mt-2 text-sm opacity-80">{detail}</div> : null}
+    <article className={`rounded-2xl border px-6 py-6 ${toneClasses[tone]}`}>
+      <div className="eyebrow text-[var(--stone)]">{label}</div>
+      <div className="metric-figure mt-4 text-4xl leading-none tracking-normal">{value}</div>
+      <div className="gold-rule mt-5 w-16" />
+      {detail ? <div className="mt-4 text-sm text-[var(--stone)]">{detail}</div> : null}
     </article>
   );
 }
@@ -67,8 +68,8 @@ export function GoalProgress({
         </span>
         <span className="font-semibold text-slate-900">{percentage}%</span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-        <div className="h-full rounded-full bg-emerald-500" style={{ width: `${percentage}%` }} />
+      <div className="h-2 overflow-hidden rounded-full bg-[#ece5da]">
+        <div className="h-full rounded-full bg-[var(--gold)]" style={{ width: `${percentage}%` }} />
       </div>
     </div>
   );
@@ -88,13 +89,13 @@ export function TaskCard({
   const goalCurrent = task.goal_current ?? 0;
   const goalTarget = task.goal_target_snapshot ?? 0;
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <article className="rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <div className="eyebrow text-[var(--stone)]">
             {task.sector_name_snapshot || task.sector_name || task.sector_slug}
           </div>
-          <h3 className="mt-1 text-lg font-semibold text-slate-950">{task.title_snapshot}</h3>
+          <h3 className="mt-2 text-lg font-medium text-[var(--noir)]">{task.title_snapshot}</h3>
         </div>
         <div className="flex flex-wrap gap-2">
           <StatusPill value={statusLabel} />
@@ -104,24 +105,24 @@ export function TaskCard({
         </div>
       </div>
 
-      <p className="mt-3 text-sm leading-6 text-slate-600">{task.description_snapshot}</p>
+      <p className="mt-3 text-sm leading-6 text-[var(--stone)]">{task.description_snapshot}</p>
 
       <dl className="mt-4 grid gap-3 text-sm md:grid-cols-2">
         <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Horário</dt>
-          <dd className="mt-1 font-semibold text-slate-900">{String(task.scheduled_start).slice(0, 5)} - {String(task.scheduled_due).slice(0, 5)}</dd>
+          <dt className="eyebrow text-[var(--stone)]">Horário</dt>
+          <dd className="mt-1 font-semibold text-[var(--noir)]">{String(task.scheduled_start).slice(0, 5)} - {String(task.scheduled_due).slice(0, 5)}</dd>
         </div>
         <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Responsável</dt>
-          <dd className="mt-1 font-semibold text-slate-900">{task.assignee_name_snapshot || task.assignee_name || 'Setor'}</dd>
+          <dt className="eyebrow text-[var(--stone)]">Responsável</dt>
+          <dd className="mt-1 font-semibold text-[var(--noir)]">{task.assignee_name_snapshot || task.assignee_name || 'Setor'}</dd>
         </div>
         <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Criticidade</dt>
-          <dd className="mt-1 font-semibold text-slate-900">{task.priority_snapshot}</dd>
+          <dt className="eyebrow text-[var(--stone)]">Criticidade</dt>
+          <dd className="mt-1 font-semibold text-[var(--noir)]">{task.priority_snapshot}</dd>
         </div>
         <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</dt>
-          <dd className="mt-1 font-semibold text-slate-900">{statusLabel}</dd>
+          <dt className="eyebrow text-[var(--stone)]">Status</dt>
+          <dd className="mt-1 font-semibold text-[var(--noir)]">{statusLabel}</dd>
         </div>
       </dl>
 
@@ -132,7 +133,7 @@ export function TaskCard({
       ) : null}
 
       {task.subtasks_total ? (
-        <div className="mt-4 text-sm text-slate-700">
+        <div className="mt-4 text-sm text-[var(--stone)]">
           {task.subtasks_completed ?? 0} de {task.subtasks_total} subtarefas concluídas
         </div>
       ) : null}
@@ -144,16 +145,16 @@ export function TaskCard({
 
 export function AlertCard({ alert, actions }: { alert: Alert; actions?: ReactNode }) {
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <article className="rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{alert.sector_name || 'Clínica'}</div>
-          <h3 className="mt-1 text-base font-semibold text-slate-950">{alert.title}</h3>
+          <div className="eyebrow text-[var(--stone)]">{alert.sector_name || 'Clínica'}</div>
+          <h3 className="mt-2 text-base font-semibold text-[var(--noir)]">{alert.title}</h3>
         </div>
         <StatusPill value={alert.severity} />
       </div>
-      <p className="mt-2 text-sm leading-6 text-slate-600">{alert.description}</p>
-      <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium text-slate-500">
+      <p className="mt-2 text-sm leading-6 text-[var(--stone)]">{alert.description}</p>
+      <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium text-[var(--stone)]">
         <span>{alert.alert_type}</span>
         <span>{new Date(alert.triggered_at).toLocaleString('pt-BR')}</span>
       </div>
@@ -165,30 +166,29 @@ export function AlertCard({ alert, actions }: { alert: Alert; actions?: ReactNod
 export function SectorCard({ sector }: { sector: Sector }) {
   const state = sector.health_state || sector.status || 'ATENCAO';
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <article className="rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{sector.slug}</div>
-          <h3 className="mt-1 text-lg font-semibold text-slate-950">{sector.name}</h3>
-          <p className="mt-2 text-sm leading-6 text-slate-600">{sector.description}</p>
+          <div className="eyebrow text-[var(--stone)]">{sector.slug}</div>
+          <h3 className="mt-2 text-lg font-semibold text-[var(--noir)]">{sector.name}</h3>
+          <p className="mt-2 text-sm leading-6 text-[var(--stone)]">{sector.description}</p>
         </div>
         <StatusPill value={state} />
       </div>
       <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
-        <div className="rounded-lg bg-slate-50 p-3">
-          <div className="text-xs uppercase tracking-wide text-slate-500">Total</div>
-          <div className="mt-1 font-semibold text-slate-950">{sector.task_count ?? 0}</div>
+        <div className="rounded-lg bg-[#f6f1ea] p-3">
+          <div className="text-xs uppercase tracking-wide text-[var(--stone)]">Total</div>
+          <div className="mt-1 font-semibold text-[var(--noir)]">{sector.task_count ?? 0}</div>
         </div>
-        <div className="rounded-lg bg-slate-50 p-3">
-          <div className="text-xs uppercase tracking-wide text-slate-500">Pendentes</div>
-          <div className="mt-1 font-semibold text-slate-950">{Math.max((sector.task_count ?? 0) - (sector.completed_count ?? 0), 0)}</div>
+        <div className="rounded-lg bg-[#f6f1ea] p-3">
+          <div className="text-xs uppercase tracking-wide text-[var(--stone)]">Pendentes</div>
+          <div className="mt-1 font-semibold text-[var(--noir)]">{Math.max((sector.task_count ?? 0) - (sector.completed_count ?? 0), 0)}</div>
         </div>
-        <div className="rounded-lg bg-slate-50 p-3">
-          <div className="text-xs uppercase tracking-wide text-slate-500">Atrasadas</div>
-          <div className="mt-1 font-semibold text-slate-950">{sector.overdue_count ?? 0}</div>
+        <div className="rounded-lg bg-[#f6f1ea] p-3">
+          <div className="text-xs uppercase tracking-wide text-[var(--stone)]">Atrasadas</div>
+          <div className="mt-1 font-semibold text-[var(--noir)]">{sector.overdue_count ?? 0}</div>
         </div>
       </div>
     </article>
   );
 }
-

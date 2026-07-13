@@ -10,11 +10,26 @@ function formatPercent(value: number) {
   return `${Math.round(value)}%`;
 }
 
+function monthLabel(value?: string) {
+  const date = value ? new Date(`${value}T12:00:00`) : new Date();
+  return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+}
+
+function monthRange(value?: string) {
+  const date = value ? new Date(`${value}T12:00:00`) : new Date();
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const start = new Date(year, month, 1);
+  const end = new Date(year, month + 1, 0);
+  const format = new Intl.DateTimeFormat('pt-BR');
+  return { start: format.format(start), end: format.format(end) };
+}
+
 function TaskActionForm({ taskId, label, action }: { taskId: string; label: string; action: string }) {
   return (
     <form action={action as unknown as (formData: FormData) => void}>
       <input type="hidden" name="id" value={taskId} />
-      <button type="submit" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+      <button type="submit" className="rounded-full border border-[var(--line)] bg-[var(--paper)] px-4 py-2 text-sm font-semibold text-[var(--noir)] hover:border-[var(--gold)]">
         {label}
       </button>
     </form>
@@ -23,7 +38,7 @@ function TaskActionForm({ taskId, label, action }: { taskId: string; label: stri
 
 function SummaryTaskList({ tasks }: { tasks: TaskInstance[] }) {
   if (!tasks.length) {
-    return <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">Nenhuma tarefa crítica pendente.</div>;
+    return <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--paper)] p-6 text-sm text-[var(--stone)]">Nenhuma tarefa crítica pendente.</div>;
   }
   return (
     <div className="grid gap-4">
@@ -51,13 +66,44 @@ export default async function DashboardPage() {
   const criticalTasks = dashboard.tasks.filter((task) => task.is_critical_snapshot && (task.is_late || task.status === 'BLOCKED' || task.status === 'PENDING')).slice(0, 4);
   const attentionAlerts = dashboard.alerts.filter((alert) => alert.severity !== 'info').slice(0, 5);
   const nowItems = dashboard.operational_now?.slice(0, 6) ?? [];
+  const range = monthRange(dashboard.date);
 
   return (
     <OpsShell
       principal={me}
-      title="Opere a clínica em segundos"
-      subtitle="Visão geral, tarefas críticas, setores e alertas ativos."
+      title="Visão geral"
+      subtitle={monthLabel(dashboard.date)}
+      headerAction={
+        <form action={syncOperationAction as unknown as () => void}>
+          <button type="submit" className="rounded-full border border-[var(--line)] bg-[var(--paper)] px-5 py-2 text-sm font-medium text-[var(--noir)] hover:border-[var(--gold)]">
+            Atualizar
+          </button>
+        </form>
+      }
     >
+      <section className="flex flex-wrap items-center gap-3">
+        <span className="eyebrow mr-2 text-[var(--stone)]">Período</span>
+        {['Hoje', 'Ontem', 'Semana', 'Mês', 'Últimos 90 dias'].map((label) => (
+          <span
+            key={label}
+            className={`rounded-full border px-5 py-2 text-sm ${
+              label === 'Mês'
+                ? 'border-[var(--noir)] bg-[var(--noir)] text-[var(--bone)]'
+                : 'border-[var(--line)] bg-[var(--paper)] text-[var(--noir)]'
+            }`}
+          >
+            {label}
+          </span>
+        ))}
+        <span className="rounded-full border border-[var(--line)] bg-[var(--paper)] px-5 py-2 text-sm text-[var(--noir)]">
+          {range.start}
+        </span>
+        <span className="text-sm text-[var(--stone)]">até</span>
+        <span className="rounded-full border border-[var(--line)] bg-[var(--paper)] px-5 py-2 text-sm text-[var(--noir)]">
+          {range.end}
+        </span>
+      </section>
+
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <MetricCard label="Tarefas do dia" value={dashboard.task_counts.total} detail="instâncias geradas hoje" />
         <MetricCard label="Concluídas" value={dashboard.task_counts.completed} detail={formatPercent(dashboard.compliance.conclusion)} tone="emerald" />
@@ -67,14 +113,14 @@ export default async function DashboardPage() {
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <article className="rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Operação de hoje</div>
-              <h3 className="mt-1 text-2xl font-semibold text-slate-950">Agora na clínica</h3>
+              <div className="eyebrow text-[var(--stone)]">Operação de hoje</div>
+              <h3 className="display mt-2 text-3xl text-[var(--noir)]">Agora na clínica</h3>
             </div>
             <form action={syncOperationAction as unknown as () => void}>
-              <button type="submit" className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">
+              <button type="submit" className="rounded-full border border-[var(--line)] bg-[var(--paper)] px-4 py-2 text-sm font-semibold text-[var(--noir)] hover:border-[var(--gold)]">
                 Sincronizar
               </button>
             </form>
@@ -82,15 +128,15 @@ export default async function DashboardPage() {
 
           <div className="mt-5 grid gap-3">
             {nowItems.map((item) => (
-              <div key={item.task_id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <div key={item.task_id} className="rounded-xl border border-[var(--line)] bg-[#f8f3ec] p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{item.sector_name}</div>
-                    <div className="mt-1 font-semibold text-slate-950">{item.title}</div>
+                    <div className="eyebrow text-[var(--stone)]">{item.sector_name}</div>
+                    <div className="mt-2 font-semibold text-[var(--noir)]">{item.title}</div>
                   </div>
                   <StatusPill value={item.status} label={item.label} />
                 </div>
-                <div className="mt-3 text-sm text-slate-600">
+                <div className="mt-3 text-sm text-[var(--stone)]">
                   {String(item.scheduled_start).slice(0, 5)} - {String(item.scheduled_due).slice(0, 5)}
                 </div>
               </div>
@@ -98,21 +144,21 @@ export default async function DashboardPage() {
           </div>
         </article>
 
-        <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Operação</div>
-          <h3 className="mt-1 text-2xl font-semibold text-slate-950">Sinalizadores</h3>
+        <article className="rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-6">
+          <div className="eyebrow text-[var(--stone)]">Operação</div>
+          <h3 className="display mt-2 text-3xl text-[var(--noir)]">Sinalizadores</h3>
           <div className="mt-4 grid gap-3">
-            {criticalTasks.length ? criticalTasks.map((task) => <TaskCard key={task.id} task={task} />) : <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500">Nenhuma tarefa crítica pendente.</div>}
+            {criticalTasks.length ? criticalTasks.map((task) => <TaskCard key={task.id} task={task} />) : <div className="rounded-xl border border-dashed border-[var(--line)] bg-[#f8f3ec] p-5 text-sm text-[var(--stone)]">Nenhuma tarefa crítica pendente.</div>}
           </div>
         </article>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
-        <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <article className="rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-6">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Setores</div>
-              <h3 className="mt-1 text-2xl font-semibold text-slate-950">Status por setor</h3>
+              <div className="eyebrow text-[var(--stone)]">Setores</div>
+              <h3 className="display mt-2 text-3xl text-[var(--noir)]">Status por setor</h3>
             </div>
             <StatusPill value={dashboard.closing_summary?.compliance ? 'EM DIA' : 'ATENCAO'} />
           </div>
@@ -123,36 +169,36 @@ export default async function DashboardPage() {
           </div>
         </article>
 
-        <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Alertas</div>
-          <h3 className="mt-1 text-2xl font-semibold text-slate-950">Central de alertas</h3>
+        <article className="rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-6">
+          <div className="eyebrow text-[var(--stone)]">Alertas</div>
+          <h3 className="display mt-2 text-3xl text-[var(--noir)]">Central de alertas</h3>
           <div className="mt-4 grid gap-3">
-            {attentionAlerts.length ? attentionAlerts.map((alert) => <AlertCard key={alert.id} alert={alert} />) : <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500">Nenhum alerta crítico ativo.</div>}
+            {attentionAlerts.length ? attentionAlerts.map((alert) => <AlertCard key={alert.id} alert={alert} />) : <div className="rounded-xl border border-dashed border-[var(--line)] bg-[#f8f3ec] p-5 text-sm text-[var(--stone)]">Nenhum alerta crítico ativo.</div>}
           </div>
         </article>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-        <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Pontos de atenção</div>
-          <h3 className="mt-1 text-2xl font-semibold text-slate-950">Falhas recorrentes</h3>
+        <article className="rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-6">
+          <div className="eyebrow text-[var(--stone)]">Pontos de atenção</div>
+          <h3 className="display mt-2 text-3xl text-[var(--noir)]">Falhas recorrentes</h3>
           <div className="mt-4 grid gap-3">
             {(dashboard.recurring_failures ?? []).length ? (
               dashboard.recurring_failures!.map((failure, index) => (
-                <div key={`${String(failure.title)}-${index}`} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                  <div className="font-semibold text-slate-950">{String(failure.title)}</div>
-                  <div className="mt-1 text-sm text-slate-600">{String(failure.total_failures)} falhas nos últimos 7 dias</div>
+                <div key={`${String(failure.title)}-${index}`} className="rounded-xl border border-[var(--line)] bg-[#f8f3ec] p-4">
+                  <div className="font-semibold text-[var(--noir)]">{String(failure.title)}</div>
+                  <div className="mt-1 text-sm text-[var(--stone)]">{String(failure.total_failures)} falhas nos últimos 7 dias</div>
                 </div>
               ))
             ) : (
-              <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500">Sem falhas recorrentes identificadas.</div>
+              <div className="rounded-xl border border-dashed border-[var(--line)] bg-[#f8f3ec] p-5 text-sm text-[var(--stone)]">Sem falhas recorrentes identificadas.</div>
             )}
           </div>
         </article>
 
-        <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Resumo</div>
-          <h3 className="mt-1 text-2xl font-semibold text-slate-950">Fechamento operacional</h3>
+        <article className="rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-6">
+          <div className="eyebrow text-[var(--stone)]">Resumo</div>
+          <h3 className="display mt-2 text-3xl text-[var(--noir)]">Fechamento operacional</h3>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <MetricCard label="Pontualidade" value={formatPercent(dashboard.compliance.punctuality)} tone="blue" />
             <MetricCard label="Conclusão" value={formatPercent(dashboard.compliance.conclusion)} tone="emerald" />

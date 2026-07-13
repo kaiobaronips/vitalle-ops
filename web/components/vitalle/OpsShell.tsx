@@ -9,103 +9,132 @@ type OpsShellProps = {
   title: string;
   subtitle?: string;
   accentLabel?: string;
+  headerAction?: ReactNode;
 };
 
+type NavItem = {
+  href: string;
+  label: string;
+  icon: string;
+};
+
+const opsItems: NavItem[] = [
+  { href: '/setores/avaliador', label: 'Avaliador', icon: 'A' },
+  { href: '/setores/asb', label: 'Auxiliar em Saude Bucal (ASB)', icon: 'B' },
+  { href: '/setores/secretaria-recepcao', label: 'Secretaria / Recepção', icon: 'S' },
+  { href: '/setores/marketing-comercial', label: 'Marketing / Comercial', icon: 'M' },
+];
+
+const adminItems: NavItem[] = [
+  { href: '/dashboard', label: 'Visão Geral', icon: '□' },
+  { href: '/setores', label: 'Setores', icon: '◌' },
+  { href: '/historico', label: 'Historico', icon: '◷' },
+  { href: '/admin/configuracoes', label: 'Configuração', icon: '⚙' },
+];
+
 function navItems(adminLike: boolean) {
-  const base = [
-    { href: '/dashboard', label: 'Visão geral' },
-    { href: '/meu-dia', label: 'Meu dia' },
-    { href: '/operacao', label: 'Operação' },
-    { href: '/setores', label: 'Setores' },
-    { href: '/alertas', label: 'Alertas' },
-    { href: '/historico', label: 'Histórico' },
-    { href: '/auditoria', label: 'Auditoria' },
-    { href: '/relatorios', label: 'Relatórios' },
-  ];
-  const admin = [
-    { href: '/admin/tarefas', label: 'Tarefas e POPs' },
-    { href: '/admin/setores', label: 'Setores' },
-    { href: '/admin/usuarios', label: 'Usuários' },
-    { href: '/admin/configuracoes', label: 'Configurações' },
-  ];
-  return adminLike ? [...base, ...admin] : base;
+  return adminLike ? adminItems : opsItems;
 }
 
-export function OpsShell({ children, principal, title, subtitle, accentLabel = 'VITALLE OPS' }: OpsShellProps) {
+function normalize(value: string) {
+  return value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function activeItem(title: string, item: NavItem) {
+  const normalizedTitle = normalize(title);
+  const normalizedLabel = normalize(item.label);
+  return normalizedTitle.includes(normalizedLabel.split(' ')[0]);
+}
+
+function VitalleMark() {
+  return (
+    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-[var(--gold)]/35 text-[var(--gold)]">
+      <span className="display text-3xl leading-none">V</span>
+    </div>
+  );
+}
+
+function NavLink({ item, active }: { item: NavItem; active: boolean }) {
+  return (
+    <Link
+      href={item.href}
+      className={`relative flex min-h-12 items-center gap-3 rounded-md px-4 py-3 text-sm transition-colors ${
+        active
+          ? 'bg-white/[0.045] text-[var(--bone)]'
+          : 'text-[var(--bone-60)] hover:bg-white/[0.025] hover:text-[var(--bone)]'
+      }`}
+    >
+      {active ? <span className="absolute left-0 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-full bg-[var(--gold)]" /> : null}
+      <span className={`grid h-5 w-5 place-items-center text-xs ${active ? 'text-[var(--gold)]' : 'text-[var(--bone-40)]'}`}>
+        {item.icon}
+      </span>
+      <span className="leading-tight">{item.label}</span>
+    </Link>
+  );
+}
+
+export function OpsShell({ children, principal, title, subtitle, accentLabel: _accentLabel = 'VITALLE OPS', headerAction }: OpsShellProps) {
   const items = navItems(principal.admin_like);
+  const activeFallback = principal.admin_like ? 'Visão Geral' : '';
 
   return (
-    <div className="min-h-screen bg-[var(--surface)] text-[var(--ink)]">
-      <aside className="fixed left-4 top-4 hidden h-[calc(100vh-2rem)] w-72 flex-col rounded-lg border border-slate-200 bg-white p-4 shadow-sm xl:flex">
-        <Link href="/dashboard" className="rounded-lg border border-slate-200 bg-slate-950 px-4 py-4 text-white">
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">{accentLabel}</p>
-          <h1 className="mt-2 text-2xl font-semibold leading-tight">Vitalle Ops</h1>
-        </Link>
+    <div className="min-h-screen bg-[var(--bone)] text-[var(--noir)] lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[278px] flex-col bg-[var(--ink)] text-[var(--bone)] lg:flex">
+        <div className="border-b border-white/[0.06] px-8 pb-8 pt-9">
+          <Link href="/" className="flex items-center gap-4">
+            <VitalleMark />
+            <span className="leading-none">
+              <span className="display block text-[1.8rem] tracking-[0.16em] text-[var(--bone)]">VITALLE</span>
+              <span className="mt-2 block text-[0.62rem] uppercase tracking-[0.26em] text-[var(--bone-40)]">Odontologia</span>
+            </span>
+          </Link>
+        </div>
 
-        <nav className="mt-4 flex-1 space-y-1 overflow-y-auto pr-1">
+        <nav className="flex-1 space-y-1 px-4 py-8">
           {items.map((item) => (
-            <Link
+            <NavLink
               key={item.href}
-              href={item.href}
-              className="flex items-center justify-between rounded-lg px-3 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-950"
-            >
-              <span>{item.label}</span>
-              <span className="h-2 w-2 rounded-full bg-slate-300" />
-            </Link>
+              item={item}
+              active={activeItem(title || activeFallback, item) || (!title && item.label === activeFallback)}
+            />
           ))}
         </nav>
 
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sessão</p>
-          <div className="mt-2 text-sm font-semibold text-slate-900">{principal.display_name}</div>
-          <div className="text-sm text-slate-600">{principal.role}</div>
-          <div className="text-xs text-slate-500">{principal.unit_id || 'sem unidade'}</div>
-          <form action={logoutAction} className="mt-3">
-            <button type="submit" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+        <div className="border-t border-white/[0.06] px-4 py-7">
+          <form action={logoutAction}>
+            <button
+              type="submit"
+              className="flex min-h-12 w-full items-center gap-3 rounded-md px-4 py-3 text-left text-sm text-[var(--bone-60)] transition-colors hover:bg-white/[0.025] hover:text-[var(--bone)]"
+            >
+              <span className="grid h-5 w-5 place-items-center text-lg text-[var(--bone-40)]">↳</span>
               Sair
             </button>
           </form>
         </div>
       </aside>
 
-      <main className="px-4 py-4 xl:ml-80 xl:px-8 xl:py-8">
-        <details className="mb-4 rounded-lg border border-slate-200 bg-white p-3 shadow-sm xl:hidden">
-          <summary className="flex cursor-pointer list-none items-center justify-between rounded-lg bg-slate-950 px-4 py-3 text-white marker:hidden">
-            <span>
-              <span className="block text-xs font-semibold uppercase tracking-wide text-emerald-300">{accentLabel}</span>
-              <span className="mt-1 block text-sm font-semibold">Menu</span>
-            </span>
-            <span className="text-2xl leading-none">+</span>
-          </summary>
-          <div className="mt-3 grid gap-2">
-            {items.map((item) => (
-              <Link key={item.href} href={item.href} className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800">
-                {item.label}
-              </Link>
-            ))}
-            <form action={logoutAction} className="mt-2">
-              <button type="submit" className="w-full rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
-                Sair
-              </button>
-            </form>
-          </div>
-        </details>
-
-        <header className="mb-6 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">{accentLabel}</p>
-          <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
+      <div className="min-w-0 flex-1 lg:ml-[278px]">
+        <header className="sticky top-0 z-30 border-b border-[var(--line)] bg-[var(--bone)]/90 backdrop-blur-md">
+          <div className="flex min-h-[5.25rem] items-center justify-between gap-4 px-5 py-4 lg:px-10">
             <div>
-              <h2 className="text-3xl font-semibold tracking-tight text-slate-950">{title}</h2>
-              {subtitle ? <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{subtitle}</p> : null}
+              <h1 className="display text-3xl leading-none text-[var(--noir)]">{title}</h1>
+              {subtitle ? <p className="mt-2 text-sm text-[var(--stone)]">{subtitle}</p> : null}
             </div>
-            <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
-              {principal.display_name}
+            <div className="flex items-center gap-3">
+              {headerAction}
+              <form action={logoutAction} className="lg:hidden">
+                <button type="submit" className="rounded-full border border-[var(--line)] bg-[var(--paper)] px-4 py-2 text-sm text-[var(--noir)]">
+                  Sair
+                </button>
+              </form>
             </div>
           </div>
         </header>
 
-        <div className="space-y-6">{children}</div>
-      </main>
+        <main className="px-5 py-8 lg:px-10">
+          <div className="mx-auto max-w-[1400px] space-y-7">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

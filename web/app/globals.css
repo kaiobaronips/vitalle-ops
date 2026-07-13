@@ -1,22 +1,31 @@
 @import "tailwindcss";
 
 :root {
-  --surface: #f5f7fb;
-  --ink: #120f0b;
-  --muted: #766d61;
-  --accent: #c99e67;
-  --accent-deep: #a37d4c;
+  --ink: #14110d;
+  --noir: #1d1d1b;
+  --gold: #c99e67;
+  --gold-deep: #a37d4c;
   --bone: #fbf9f5;
   --paper: #ffffff;
-  --line: rgba(255, 255, 255, 0.08);
+  --line: #e7e1d6;
+  --stone: #8c8478;
+  --surface: var(--bone);
+  --muted: var(--stone);
+  --accent: var(--gold);
+  --accent-deep: var(--gold-deep);
   --bone-60: rgba(251, 249, 245, 0.6);
   --bone-40: rgba(251, 249, 245, 0.4);
 }
 
 @theme inline {
   --color-ink: var(--ink);
+  --color-noir: var(--noir);
   --color-accent: var(--accent);
+  --color-gold: var(--gold);
+  --color-gold-deep: var(--gold-deep);
   --color-bone: var(--bone);
+  --color-paper: var(--paper);
+  --color-line: var(--line);
   --font-display: var(--font-cormorant);
   --font-sans: var(--font-inter);
 }
@@ -28,19 +37,25 @@
 
 html {
   min-height: 100%;
-  background: var(--ink);
+  background: var(--bone);
 }
 
 body {
   min-height: 100%;
   margin: 0;
   font-family: var(--font-inter), "Aptos", system-ui, sans-serif;
-  color: var(--bone);
-  background:
-    radial-gradient(circle at 50% 14%, rgba(201, 158, 103, 0.12), transparent 32%),
-    linear-gradient(180deg, #14110d 0%, #0f0c09 100%);
+  color: var(--noir);
+  background: var(--bone);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .font-display {
@@ -49,6 +64,24 @@ body {
 
 .display {
   font-family: var(--font-cormorant), Georgia, serif;
+}
+
+.eyebrow {
+  font-size: 0.6875rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.metric-figure {
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-weight: 500;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.gold-rule {
+  height: 1px;
+  background: linear-gradient(90deg, var(--gold) 0%, var(--gold-deep) 40%, transparent 100%);
 }
 
 .auth-page {
