@@ -12,7 +12,7 @@ const options = [
     actionLabel: 'Criar tarefa',
   },
   {
-    href: '/admin/setores',
+    href: '/admin/configuracoes/novo-setor',
     title: 'Novo Setor',
     description: 'Cadastre um novo setor operacional para organizar rotinas, responsáveis e tarefas do dia.',
     actionLabel: 'Criar Setor',
