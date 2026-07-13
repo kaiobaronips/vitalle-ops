@@ -31,9 +31,57 @@ export type ActionState = {
 };
 
 const initialError: ActionState = { ok: false, message: 'Formulário inválido.' };
+const vitalleOrganizationId = 'vitalle-odontologia';
+const vitalleUnitId = 'vitalle-main';
 
 function text(formData: FormData, key: string): string {
   return String(formData.get(key) ?? '').trim();
+}
+
+function createDevSession(role: 'admin' | 'collaborator', userId: string, email: string, displayName: string): VitalleDevSession {
+  return {
+    role,
+    user_id: userId,
+    email,
+    display_name: displayName,
+    organization_id: vitalleOrganizationId,
+    unit_id: vitalleUnitId,
+    sector_id: '',
+  };
+}
+
+async function persistDevSession(session: VitalleDevSession): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.set(vitalleDevSessionCookieName, JSON.stringify(session), {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 30,
+  });
+}
+
+export async function opsLoginAction(): Promise<void> {
+  await persistDevSession(createDevSession('collaborator', 'demo-ops', 'ops@vitalle.local', 'Operador Vitalle'));
+  redirect('/dashboard');
+}
+
+export async function adminLoginAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const password = text(formData, 'password');
+  const expected = (process.env.VITALLE_ADMIN_PASSWORD ?? process.env.DASHBOARD_PASSWORD ?? '').trim();
+
+  if (!expected) {
+    return { ok: false, message: 'Senha do administrador não configurada.' };
+  }
+  if (!password) {
+    return { ok: false, message: 'Informe a senha.' };
+  }
+  if (password !== expected) {
+    return { ok: false, message: 'Senha incorreta.' };
+  }
+
+  await persistDevSession(createDevSession('admin', 'demo-admin', 'admin@vitalle.local', 'Administrador Vitalle'));
+  redirect('/dashboard');
 }
 
 async function revalidateVitalle() {
@@ -62,6 +110,15 @@ export async function devLoginAction(_previous: ActionState, formData: FormData)
       organization_id: 'vitalle-odontologia',
       unit_id: 'vitalle-main',
       sector_id: 'sector-avaliador',
+    },
+    ops: {
+      role: 'collaborator',
+      user_id: 'demo-ops',
+      email: 'ops@vitalle.local',
+      display_name: 'Operador Vitalle',
+      organization_id: vitalleOrganizationId,
+      unit_id: vitalleUnitId,
+      sector_id: '',
     },
     gestor: {
       role: 'manager',
@@ -115,14 +172,7 @@ export async function devLoginAction(_previous: ActionState, formData: FormData)
     return { ok: false, message: 'Persona de desenvolvimento inválida.' };
   }
 
-  const cookieStore = await cookies();
-  cookieStore.set(vitalleDevSessionCookieName, JSON.stringify(session), {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    path: '/',
-    maxAge: 60 * 60 * 24 * 30,
-  });
+  await persistDevSession(session);
 
   redirect('/dashboard');
 }
