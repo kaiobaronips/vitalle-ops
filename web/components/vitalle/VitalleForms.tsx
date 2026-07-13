@@ -28,6 +28,68 @@ function Field({
   );
 }
 
+const sectorIconOptions = [
+  { value: 'building-2', label: 'Clínica' },
+  { value: 'clipboard-check', label: 'Checklist' },
+  { value: 'user-round-check', label: 'Atendimento' },
+  { value: 'stethoscope', label: 'Saúde' },
+  { value: 'megaphone', label: 'Comercial' },
+  { value: 'calendar-days', label: 'Agenda' },
+];
+
+function SectorIconPreview({ value }: { value: string }) {
+  const common = {
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.8,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+  };
+  const paths: Record<string, ReactNode> = {
+    'building-2': (
+      <>
+        <path {...common} d="M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16" />
+        <path {...common} d="M9 8h1M14 8h1M9 12h1M14 12h1M9 16h1M14 16h1M4 21h16" />
+      </>
+    ),
+    'clipboard-check': (
+      <>
+        <path {...common} d="M9 4h6l1 2h2v15H6V6h2l1-2Z" />
+        <path {...common} d="m9 13 2 2 4-5" />
+      </>
+    ),
+    'user-round-check': (
+      <>
+        <path {...common} d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
+        <path {...common} d="M4 21a8 8 0 0 1 9.5-7.8" />
+        <path {...common} d="m16 18 2 2 4-5" />
+      </>
+    ),
+    stethoscope: (
+      <>
+        <path {...common} d="M6 4v5a4 4 0 0 0 8 0V4" />
+        <path {...common} d="M10 13v2a5 5 0 0 0 10 0v-1" />
+        <circle {...common} cx="20" cy="13" r="1.5" />
+      </>
+    ),
+    megaphone: (
+      <>
+        <path {...common} d="M4 13h3l9 4V7l-9 4H4v2Z" />
+        <path {...common} d="M7 14v4a2 2 0 0 0 2 2h1" />
+        <path {...common} d="M19 9a4 4 0 0 1 0 6" />
+      </>
+    ),
+    'calendar-days': (
+      <>
+        <path {...common} d="M7 3v4M17 3v4M4 8h16M5 5h14v16H5z" />
+        <path {...common} d="M8 12h2M12 12h2M16 12h1M8 16h2M12 16h2M16 16h1" />
+      </>
+    ),
+  };
+
+  return <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">{paths[value] ?? paths['building-2']}</svg>;
+}
+
 function Toggle({
   name,
   label,
@@ -198,17 +260,18 @@ export function SectorForm({
   sector?: Sector;
   users: Array<Record<string, unknown>>;
 }) {
+  const selectedIcon = sector?.icon ?? 'building-2';
   return (
     <form action={saveSectorAction as unknown as (formData: FormData) => void} className="grid gap-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
       <input type="hidden" name="id" value={sector?.id ?? ''} />
+      <input type="hidden" name="slug" value={sector?.slug ?? ''} />
+      <input type="hidden" name="color" value={sector?.color ?? '#0f766e'} />
+      <input type="hidden" name="sort_order" value={sector?.sort_order ?? 0} />
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Nome">
+        <Field label="Nome do Setor">
           <input name="name" defaultValue={sector?.name ?? ''} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
         </Field>
-        <Field label="Slug">
-          <input name="slug" defaultValue={sector?.slug ?? ''} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
-        </Field>
-        <Field label="Responsável">
+        <Field label="Responsável pelo setor">
           <select name="responsible_user_id" defaultValue={sector?.responsible_user_id ?? ''} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
             <option value="">Setor sem responsável</option>
             {users.map((user) => (
@@ -218,23 +281,30 @@ export function SectorForm({
             ))}
           </select>
         </Field>
-        <Field label="Cor">
-          <input name="color" type="color" defaultValue={sector?.color ?? '#0f766e'} className="h-10 rounded-lg border border-slate-300 bg-white px-3 py-2" />
-        </Field>
-        <Field label="Ícone">
-          <input name="icon" defaultValue={sector?.icon ?? 'building-2'} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
-        </Field>
-        <Field label="Ordem">
-          <input name="sort_order" type="number" defaultValue={sector?.sort_order ?? 0} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
-        </Field>
         <Field label="Status">
           <select name="status" defaultValue={sector?.status ?? 'active'} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
-            <option value="active">active</option>
-            <option value="inactive">inactive</option>
+            <option value="active">Ativo</option>
+            <option value="inactive">Inativo</option>
           </select>
         </Field>
       </div>
-      <Field label="Descrição">
+      <div className="grid gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Ícone</span>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {sectorIconOptions.map((option) => (
+            <label key={option.value} className="cursor-pointer">
+              <input className="peer sr-only" type="radio" name="icon" value={option.value} defaultChecked={selectedIcon === option.value} />
+              <span className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition peer-checked:border-[var(--gold)] peer-checked:bg-[#f6f1ea] peer-checked:text-[var(--noir)] hover:border-[var(--gold)]">
+                <span className="grid h-9 w-9 place-items-center rounded-lg bg-[#f6f1ea] text-[var(--gold)]">
+                  <SectorIconPreview value={option.value} />
+                </span>
+                {option.label}
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+      <Field label="Descrição do setor">
         <textarea name="description" defaultValue={sector?.description ?? ''} rows={4} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
       </Field>
       <button type="submit" className="w-fit rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white">
