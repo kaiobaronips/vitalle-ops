@@ -7,16 +7,14 @@ export const dynamic = 'force-dynamic';
 const options = [
   {
     href: '/admin/tarefas/nova',
-    title: 'Nova tarefa',
+    title: 'Nova Tarefa',
     description: 'Crie uma tarefa específica para um setor, definindo nome, setor responsável e horário.',
-    meta: 'nova tarefa · setor · horário',
     actionLabel: 'Criar tarefa',
   },
   {
     href: '/admin/setores',
     title: 'Novo Setor',
     description: 'Cadastre um novo setor operacional para organizar rotinas, responsáveis e tarefas do dia.',
-    meta: 'setor · responsável · operação',
     actionLabel: 'Criar Setor',
   },
 ];
@@ -34,8 +32,7 @@ export default async function AdminConfiguracoesPage() {
             href={option.href}
             className="group rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-7 transition hover:-translate-y-0.5 hover:border-[var(--gold)] hover:shadow-md"
           >
-            <p className="eyebrow text-[var(--stone)]">{option.meta}</p>
-            <h2 className="display mt-4 text-4xl leading-none text-[var(--noir)]">{option.title}</h2>
+            <h2 className="display text-4xl leading-none text-[var(--noir)]">{option.title}</h2>
             <p className="mt-5 max-w-xl text-sm leading-6 text-[var(--stone)]">{option.description}</p>
             <div className="gold-rule mt-6 w-20" />
             <span className="mt-7 inline-flex rounded-full border border-[var(--line)] px-5 py-2 text-sm font-semibold text-[var(--noir)] group-hover:border-[var(--gold)]">
