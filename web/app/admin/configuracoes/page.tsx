@@ -1,37 +1,47 @@
+import Link from 'next/link';
 import { OpsShell } from '@/components/vitalle/OpsShell';
-import { SettingForm } from '@/components/vitalle/VitalleForms';
-import { getVitalleMe, getVitalleSettings } from '@/lib/vitalle-api';
+import { getVitalleMe } from '@/lib/vitalle-api';
 
 export const dynamic = 'force-dynamic';
 
+const options = [
+  {
+    href: '/admin/tarefas/nova',
+    title: 'Nova tarefa',
+    description: 'Crie uma tarefa específica para um setor, definindo nome, setor responsável e horário.',
+    meta: 'nova tarefa · setor · horário',
+  },
+  {
+    href: '/admin/setores',
+    title: 'Novo Setor',
+    description: 'Cadastre um novo setor operacional para organizar rotinas, responsáveis e tarefas do dia.',
+    meta: 'setor · responsável · operação',
+  },
+];
+
 export default async function AdminConfiguracoesPage() {
-  const [meResult, settingsResult] = await Promise.all([getVitalleMe(), getVitalleSettings()]);
+  const meResult = await getVitalleMe();
   const me = meResult.data;
-  const settings = settingsResult.data.items ?? [];
 
   return (
-    <OpsShell principal={me} title="Configurações" subtitle="Parâmetros do sistema e ajustes operacionais.">
-      <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="text-xl font-semibold text-slate-950">Nova configuração</h3>
-          <div className="mt-4">
-            <SettingForm />
-          </div>
-        </div>
-        <div className="grid gap-4">
-          {settings.map((setting) => (
-            <details key={setting.id} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-              <summary className="cursor-pointer list-none">
-                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{setting.key}</div>
-                <div className="mt-1 text-sm text-slate-600">Configuração ativa</div>
-              </summary>
-              <div className="mt-4">
-                <SettingForm setting={setting} />
-              </div>
-            </details>
-          ))}
-        </div>
-      </div>
+    <OpsShell principal={me} title="Configurações" subtitle="Adicione e remova opções operacionais do sistema.">
+      <section className="grid gap-5 md:grid-cols-2">
+        {options.map((option) => (
+          <Link
+            key={option.href}
+            href={option.href}
+            className="group rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-7 transition hover:-translate-y-0.5 hover:border-[var(--gold)] hover:shadow-md"
+          >
+            <p className="eyebrow text-[var(--stone)]">{option.meta}</p>
+            <h2 className="display mt-4 text-4xl leading-none text-[var(--noir)]">{option.title}</h2>
+            <p className="mt-5 max-w-xl text-sm leading-6 text-[var(--stone)]">{option.description}</p>
+            <div className="gold-rule mt-6 w-20" />
+            <span className="mt-7 inline-flex rounded-full border border-[var(--line)] px-5 py-2 text-sm font-semibold text-[var(--noir)] group-hover:border-[var(--gold)]">
+              Abrir
+            </span>
+          </Link>
+        ))}
+      </section>
     </OpsShell>
   );
 }
