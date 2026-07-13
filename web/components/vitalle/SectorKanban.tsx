@@ -18,6 +18,8 @@ type TaskBoardItem = {
   columnId: string;
 };
 
+type CelebrationKind = 'task' | 'day';
+
 const defaultColumns: KanbanColumn[] = [
   { id: 'todo', title: 'Tarefas', kind: 'todo' },
   { id: 'doing', title: 'Em andamento', kind: 'doing' },
@@ -59,7 +61,7 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
   const [newColumnTitle, setNewColumnTitle] = useState('');
   const [draggedTaskId, setDraggedTaskId] = useState<string>('');
   const [message, setMessage] = useState('');
-  const [celebrating, setCelebrating] = useState(false);
+  const [celebration, setCelebration] = useState<CelebrationKind | null>(null);
   const celebrationTimer = useRef<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -70,18 +72,18 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
     }, {});
   }, [columns, items]);
 
-  function showCelebration() {
+  function showCelebration(kind: CelebrationKind) {
     if (celebrationTimer.current) {
       window.clearTimeout(celebrationTimer.current);
     }
 
-    setCelebrating(false);
+    setCelebration(null);
     window.requestAnimationFrame(() => {
-      setCelebrating(true);
+      setCelebration(kind);
       celebrationTimer.current = window.setTimeout(() => {
-        setCelebrating(false);
+        setCelebration(null);
         celebrationTimer.current = null;
-      }, 2400);
+      }, kind === 'day' ? 3600 : 2400);
     });
   }
 
@@ -100,10 +102,13 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
       return;
     }
 
-    setItems((current) => current.map((item) => (item.task.id === taskId ? { ...item, columnId: column.id } : item)));
+    const nextItems = items.map((item) => (item.task.id === taskId ? { ...item, columnId: column.id } : item));
+    setItems(nextItems);
     const task = currentItem.task;
     if (column.kind === 'finished') {
-      showCelebration();
+      const finishedColumnIds = new Set(columns.filter((itemColumn) => itemColumn.kind === 'finished').map((itemColumn) => itemColumn.id));
+      const allTasksFinished = nextItems.length > 0 && nextItems.every((item) => finishedColumnIds.has(item.columnId));
+      showCelebration(allTasksFinished ? 'day' : 'task');
     }
 
     startTransition(async () => {
@@ -121,7 +126,7 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
         if (column.kind === 'finished' && celebrationTimer.current) {
           window.clearTimeout(celebrationTimer.current);
           celebrationTimer.current = null;
-          setCelebrating(false);
+          setCelebration(null);
         }
         return;
       }
@@ -147,16 +152,25 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
 
   return (
     <section className="space-y-5">
-      {celebrating ? (
+      {celebration ? (
         <div className="pointer-events-none fixed inset-0 z-[100] grid place-items-center">
-          <div className="celebration-burst">
+          <div className={`celebration-burst ${celebration === 'day' ? 'day-complete' : ''}`}>
             <span />
             <span />
             <span />
             <span />
             <span />
             <span />
-            <strong>Parabéns!</strong>
+            <strong>
+              {celebration === 'day' ? (
+                <>
+                  <i className="bonbon-icon" aria-hidden="true" />
+                  <em>Parabéns, seu dia ficou mais doce</em>
+                </>
+              ) : (
+                'Parabéns!'
+              )}
+            </strong>
           </div>
         </div>
       ) : null}

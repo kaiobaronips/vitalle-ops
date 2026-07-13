@@ -284,6 +284,10 @@ body {
 .celebration-burst strong {
   position: relative;
   z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
   border-radius: 999px;
   background: var(--gold);
   color: #14110d;
@@ -291,6 +295,62 @@ body {
   font-size: 1rem;
   font-weight: 800;
   box-shadow: 0 18px 50px rgba(20, 17, 13, 0.22);
+}
+
+.celebration-burst strong em {
+  font-style: normal;
+}
+
+.celebration-burst.day-complete {
+  height: 14rem;
+  width: min(24rem, calc(100vw - 2rem));
+  animation-duration: 3600ms;
+}
+
+.celebration-burst.day-complete strong {
+  max-width: min(22rem, calc(100vw - 2rem));
+  padding: 1rem 1.35rem;
+  text-align: center;
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.bonbon-icon {
+  position: relative;
+  display: inline-block;
+  height: 1.6rem;
+  width: 2.5rem;
+  flex: 0 0 auto;
+}
+
+.bonbon-icon::before,
+.bonbon-icon::after {
+  position: absolute;
+  top: 50%;
+  height: 1.15rem;
+  width: 1.15rem;
+  border: 2px solid #14110d;
+  content: "";
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.bonbon-icon::before {
+  left: 0;
+  border-right: 0;
+  border-top-left-radius: 0.35rem;
+}
+
+.bonbon-icon::after {
+  right: 0;
+  border-left: 0;
+  border-bottom-right-radius: 0.35rem;
+}
+
+.bonbon-icon {
+  background:
+    radial-gradient(circle at 50% 50%, #14110d 0 0.18rem, transparent 0.2rem),
+    linear-gradient(#14110d, #14110d) center / 1.35rem 1.05rem no-repeat;
+  border-radius: 999px;
 }
 
 .celebration-burst span {
@@ -310,6 +370,13 @@ body {
 .celebration-burst span:nth-child(4) { --x: 0rem; --y: 5rem; }
 .celebration-burst span:nth-child(5) { --x: -4.4rem; --y: 2.2rem; }
 .celebration-burst span:nth-child(6) { --x: -4.2rem; --y: -2.5rem; }
+
+.celebration-burst.day-complete span:nth-child(1) { --x: 0rem; --y: -6.2rem; }
+.celebration-burst.day-complete span:nth-child(2) { --x: 6.5rem; --y: -2.8rem; }
+.celebration-burst.day-complete span:nth-child(3) { --x: 6rem; --y: 3rem; }
+.celebration-burst.day-complete span:nth-child(4) { --x: 0rem; --y: 6.3rem; }
+.celebration-burst.day-complete span:nth-child(5) { --x: -6.5rem; --y: 2.8rem; }
+.celebration-burst.day-complete span:nth-child(6) { --x: -6rem; --y: -3rem; }
 
 @keyframes celebration-pop {
   0% {
