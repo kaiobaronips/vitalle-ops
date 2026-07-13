@@ -5,6 +5,7 @@ import {
   getDirectMe,
   getDirectSectors,
   getDirectTaskTemplates,
+  removeDirectTaskTemplateEverywhere,
   saveDirectSector,
   saveDirectTaskTemplate,
 } from './vitalle-db-direct';
@@ -299,6 +300,18 @@ export async function removeVitalleDailyTask(taskId: string): Promise<ApiMutatio
     }
   }
   return mutate<TaskInstance>(`/v1/vitalle/tarefas/${taskId}`, 'DELETE');
+}
+
+export async function removeVitalleTaskTemplateEverywhere(taskTemplateId: string): Promise<ApiMutationResult<TaskTemplate>> {
+  if (canUseDirectDatabase()) {
+    try {
+      const data = await removeDirectTaskTemplateEverywhere(taskTemplateId);
+      return { ok: true, status: 200, data, message: 'Operação concluída.' };
+    } catch (error) {
+      console.warn('vitalle_direct_db_mutation_failed', 'task_templates.remove_everywhere', error);
+    }
+  }
+  return archiveVitalleTaskTemplate(taskTemplateId);
 }
 
 export async function blockVitalleTask(taskId: string, reasonType: string, details: string): Promise<ApiMutationResult<Record<string, unknown>>> {

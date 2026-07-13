@@ -1,8 +1,8 @@
 'use client';
 
 import { useActionState, useEffect, useMemo, useState } from 'react';
-import { removeDailyTaskAction, saveTaskTemplateAction, type ActionState } from '@/app/vitalle-actions';
-import type { Sector, TaskInstance } from '@/lib/vitalle-types';
+import { removeSectorTaskAction, saveTaskTemplateAction, type ActionState } from '@/app/vitalle-actions';
+import type { Sector, TaskTemplate } from '@/lib/vitalle-types';
 
 const initialActionState: ActionState = { ok: false, message: '' };
 
@@ -148,31 +148,31 @@ function TaskQuickCreateModal({
   );
 }
 
-function DailyTaskCard({
+function TaskTemplateCard({
   task,
   onRequestRemove,
 }: {
-  task: TaskInstance;
-  onRequestRemove: (task: TaskInstance) => void;
+  task: TaskTemplate;
+  onRequestRemove: (task: TaskTemplate) => void;
 }) {
   return (
     <div className="rounded-lg border border-[#ded8cf] bg-white p-3 shadow-sm">
       <div className="flex items-start justify-between gap-3">
-        <h4 className="text-sm font-semibold leading-snug text-[#252525]">{task.title_snapshot}</h4>
-        <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-700">
-          {task.status.replaceAll('_', ' ')}
+        <h4 className="text-sm font-semibold leading-snug text-[#252525]">{task.title}</h4>
+        <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[0.65rem] font-semibold text-emerald-700">
+          ativo
         </span>
       </div>
-      {task.description_snapshot ? <p className="mt-2 text-xs leading-5 text-slate-600">{task.description_snapshot}</p> : null}
+      {task.description ? <p className="mt-2 text-xs leading-5 text-slate-600">{task.description}</p> : null}
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[0.68rem] font-semibold text-slate-500">
         <span>
-          {shortTime(task.scheduled_start)} - {shortTime(task.scheduled_due)}
+          {shortTime(task.start_time)} - {shortTime(task.due_time)}
         </span>
         <button
           type="button"
           onClick={() => onRequestRemove(task)}
           className="grid h-7 w-7 place-items-center rounded-full bg-rose-600 text-base font-bold leading-none text-white shadow-sm transition hover:bg-rose-700"
-          aria-label={`Remover ${task.title_snapshot}`}
+          aria-label={`Remover ${task.title}`}
           title="Remover tarefa"
         >
           -
@@ -186,7 +186,7 @@ function RemoveTaskModal({
   task,
   onClose,
 }: {
-  task: TaskInstance;
+  task: TaskTemplate;
   onClose: () => void;
 }) {
   return (
@@ -200,9 +200,9 @@ function RemoveTaskModal({
           Tem certeza que deseja remover esta tarefa do setor?
         </p>
         <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
-          <p className="text-sm font-semibold text-slate-950">{task.title_snapshot}</p>
+          <p className="text-sm font-semibold text-slate-950">{task.title}</p>
           <p className="mt-1 text-xs text-slate-500">
-            {shortTime(task.scheduled_start)} - {shortTime(task.scheduled_due)}
+            {shortTime(task.start_time)} - {shortTime(task.due_time)}
           </p>
         </div>
 
@@ -214,7 +214,7 @@ function RemoveTaskModal({
           >
             Cancelar
           </button>
-          <form action={removeDailyTaskAction as unknown as (formData: FormData) => void}>
+          <form action={removeSectorTaskAction as unknown as (formData: FormData) => void}>
             <input type="hidden" name="id" value={task.id} />
             <button
               type="submit"
@@ -234,12 +234,20 @@ export function AdminSectorTaskBoard({
   tasks,
 }: {
   sectors: Sector[];
-  tasks: TaskInstance[];
+  tasks: TaskTemplate[];
 }) {
   const [selectedSector, setSelectedSector] = useState<Sector | null>(null);
-  const [taskToRemove, setTaskToRemove] = useState<TaskInstance | null>(null);
+  const [taskToRemove, setTaskToRemove] = useState<TaskTemplate | null>(null);
   const tasksBySector = useMemo(() => {
-    return tasks.reduce<Record<string, TaskInstance[]>>((acc, task) => {
+    const visibleTasks = tasks
+      .filter((task) => task.active !== false && !task.archived_at)
+      .sort((a, b) => {
+        const left = `${shortTime(a.start_time)}-${shortTime(a.due_time)}-${a.title}`;
+        const right = `${shortTime(b.start_time)}-${shortTime(b.due_time)}-${b.title}`;
+        return left.localeCompare(right, 'pt-BR');
+      });
+
+    return visibleTasks.reduce<Record<string, TaskTemplate[]>>((acc, task) => {
       acc[task.sector_id] = [...(acc[task.sector_id] ?? []), task];
       return acc;
     }, {});
@@ -279,7 +287,7 @@ export function AdminSectorTaskBoard({
 
                 <div className="grid gap-3">
                   {sectorTasks.length ? (
-                    sectorTasks.map((task) => <DailyTaskCard key={task.id} task={task} onRequestRemove={setTaskToRemove} />)
+                    sectorTasks.map((task) => <TaskTemplateCard key={task.id} task={task} onRequestRemove={setTaskToRemove} />)
                   ) : (
                     <div className="rounded-lg border border-dashed border-[#d8d0c4] bg-white/70 p-4 text-sm text-slate-500">
                       Nenhuma tarefa cadastrada neste setor.

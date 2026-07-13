@@ -375,3 +375,57 @@ export async function deleteDirectDailyTask(taskId: string): Promise<TaskInstanc
   if (!task) throw new Error('Tarefa não encontrada.');
   return task;
 }
+
+export async function removeDirectTaskTemplateEverywhere(templateId: string): Promise<TaskTemplate> {
+  await withClient(async (client) => {
+    const existing = await client.query('select id from task_templates where id = $1 and unit_id = $2 limit 1', [templateId, unitId]);
+    if (!existing.rowCount) throw new Error('Tarefa não encontrada.');
+
+    const dailyTasks = await client.query<{ id: string }>(
+      'select id::text as id from daily_task_instances where task_template_id = $1 and unit_id = $2',
+      [templateId, unitId],
+    );
+    const dailyTaskIds = dailyTasks.rows.map((row) => row.id);
+    if (dailyTaskIds.length) {
+      await client.query(
+        "delete from audit_events where unit_id = $1 and entity_type = 'daily_task_instance' and entity_id = any($2::text[])",
+        [unitId, dailyTaskIds],
+      );
+      await client.query('delete from daily_task_instances where id::text = any($1::text[]) and unit_id = $2', [dailyTaskIds, unitId]);
+    }
+
+    await client.query(
+      `
+      update task_recurrence_rules
+      set is_active = false,
+          updated_at = now()
+      where id in (
+        select recurrence_rule_id
+        from task_templates
+        where id = $1
+          and unit_id = $2
+          and recurrence_rule_id is not null
+      )
+      `,
+      [templateId, unitId],
+    );
+    const result = await client.query(
+      `
+      update task_templates
+      set active = false,
+          archived_at = coalesce(archived_at, now()),
+          updated_at = now()
+      where id = $1
+        and unit_id = $2
+      returning *
+      `,
+      [templateId, unitId],
+    );
+    if (!result.rowCount) throw new Error('Tarefa não encontrada.');
+  });
+
+  const templates = await getDirectTaskTemplates();
+  const template = templates.items.find((item) => item.id === templateId);
+  if (!template) throw new Error('Tarefa removida, mas não foi possível recarregar o registro.');
+  return template;
+}

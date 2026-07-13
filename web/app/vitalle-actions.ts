@@ -13,6 +13,7 @@ import {
   duplicateVitalleTaskTemplate,
   markVitalleTaskNotApplicable,
   removeVitalleDailyTask,
+  removeVitalleTaskTemplateEverywhere,
   reopenVitalleTask,
   resolveVitalleAlert,
   saveVitalleSector,
@@ -254,7 +255,11 @@ export async function saveTaskTemplateAction(_previous: ActionState, formData: F
   if (!result.ok) {
     return { ok: false, message: result.message };
   }
+  const syncResult = await syncVitalleOperation();
   await revalidateVitalle();
+  if (!syncResult.ok) {
+    return { ok: false, message: `Tarefa salva, mas a operação do dia não foi sincronizada: ${syncResult.message}` };
+  }
   return { ok: true, message: 'Tarefa salva.' };
 }
 
@@ -356,6 +361,13 @@ export async function removeDailyTaskAction(formData: FormData): Promise<ActionS
   if (!result.ok) return { ok: false, message: result.message };
   await revalidateVitalle();
   return { ok: true, message: 'Tarefa removida.' };
+}
+
+export async function removeSectorTaskAction(formData: FormData): Promise<ActionState> {
+  const result = await removeVitalleTaskTemplateEverywhere(text(formData, 'id'));
+  if (!result.ok) return { ok: false, message: result.message };
+  await revalidateVitalle();
+  return { ok: true, message: 'Tarefa removida do sistema.' };
 }
 
 export async function blockTaskAction(formData: FormData): Promise<ActionState> {
