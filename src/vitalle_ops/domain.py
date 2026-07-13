@@ -298,7 +298,12 @@ def sector_health_status(tasks: Iterable[dict[str, Any]], now: datetime | None =
     critical_overdue = []
     for task in tasks:
         snapshot = task_status_snapshot(task, now)
-        due = task.get("scheduled_due")
+        due = _task_datetime(
+            task.get("scheduled_due"),
+            task.get("operational_date"),
+            task.get("timezone"),
+            now,
+        )
         if snapshot.is_overdue:
             overdue.append(task)
             if task.get("is_critical_snapshot"):

@@ -257,8 +257,8 @@ class ReportInput(BaseModel):
     external_form_url: str = ""
 
 
-def _principal_guard() -> APIPrincipal:
-    return require_principal()
+def _principal_guard(principal: APIPrincipal = Depends(require_principal)) -> APIPrincipal:
+    return principal
 
 
 @router.get("/me")

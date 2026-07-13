@@ -45,6 +45,69 @@ def _first_or_none(rows: list[dict[str, Any]]) -> dict[str, Any]:
     return rows[0] if rows else {}
 
 
+def upsert_organization(payload: dict[str, Any]) -> dict[str, Any]:
+    with get_connection() as connection:
+        with connection.cursor() as cur:
+            cur.execute(
+                """
+                insert into organizations (id, name, slug, timezone, is_active, metadata_json)
+                values (%(id)s, %(name)s, %(slug)s, %(timezone)s, %(is_active)s, %(metadata_json)s::jsonb)
+                on conflict (id) do update set
+                    name = excluded.name,
+                    slug = excluded.slug,
+                    timezone = excluded.timezone,
+                    is_active = excluded.is_active,
+                    metadata_json = excluded.metadata_json,
+                    updated_at = now()
+                returning *
+                """,
+                {
+                    "id": payload["id"],
+                    "name": payload["name"],
+                    "slug": payload["slug"],
+                    "timezone": payload.get("timezone", "America/Sao_Paulo"),
+                    "is_active": payload.get("is_active", True),
+                    "metadata_json": _json(payload.get("metadata_json") or {}),
+                },
+            )
+            return dict(cur.fetchone() or {})
+
+
+def upsert_unit(payload: dict[str, Any]) -> dict[str, Any]:
+    with get_connection() as connection:
+        with connection.cursor() as cur:
+            cur.execute(
+                """
+                insert into units (id, organization_id, name, slug, timezone, is_active, sort_order, metadata_json)
+                values (
+                    %(id)s, %(organization_id)s, %(name)s, %(slug)s, %(timezone)s,
+                    %(is_active)s, %(sort_order)s, %(metadata_json)s::jsonb
+                )
+                on conflict (id) do update set
+                    organization_id = excluded.organization_id,
+                    name = excluded.name,
+                    slug = excluded.slug,
+                    timezone = excluded.timezone,
+                    is_active = excluded.is_active,
+                    sort_order = excluded.sort_order,
+                    metadata_json = excluded.metadata_json,
+                    updated_at = now()
+                returning *
+                """,
+                {
+                    "id": payload["id"],
+                    "organization_id": payload["organization_id"],
+                    "name": payload["name"],
+                    "slug": payload["slug"],
+                    "timezone": payload.get("timezone", "America/Sao_Paulo"),
+                    "is_active": payload.get("is_active", True),
+                    "sort_order": payload.get("sort_order", 0),
+                    "metadata_json": _json(payload.get("metadata_json") or {}),
+                },
+            )
+            return dict(cur.fetchone() or {})
+
+
 def get_scope_defaults() -> dict[str, Any]:
     with get_connection() as connection:
         with connection.cursor() as cur:
@@ -789,7 +852,7 @@ def list_daily_task_instances(unit_id: str, operational_date: date) -> list[dict
                 """
                 select
                     dti.*,
-                    do.timezone as timezone,
+                    op.timezone as timezone,
                     s.slug as sector_slug,
                     s.name as sector_name,
                     s.color as sector_color,
@@ -801,7 +864,7 @@ def list_daily_task_instances(unit_id: str, operational_date: date) -> list[dict
                     coalesce(subs.completed_subtasks, 0) as completed_subtasks,
                     coalesce(goals.goal_current, 0) as goal_progress
                 from daily_task_instances dti
-                join daily_operations do on do.id = dti.daily_operation_id
+                join daily_operations op on op.id = dti.daily_operation_id
                 join sectors s on s.id = dti.sector_id
                 left join users u on u.id = dti.assignee_id
                 left join (
@@ -833,7 +896,7 @@ def get_daily_task_instance(task_id: str) -> dict[str, Any]:
                 """
                 select
                     dti.*,
-                    do.timezone as timezone,
+                    op.timezone as timezone,
                     s.slug as sector_slug,
                     s.name as sector_name,
                     s.color as sector_color,
@@ -843,7 +906,7 @@ def get_daily_task_instance(task_id: str) -> dict[str, Any]:
                     coalesce(subs.completed_subtasks, 0) as completed_subtasks,
                     coalesce(goals.goal_current, 0) as goal_progress
                 from daily_task_instances dti
-                join daily_operations do on do.id = dti.daily_operation_id
+                join daily_operations op on op.id = dti.daily_operation_id
                 join sectors s on s.id = dti.sector_id
                 left join users u on u.id = dti.assignee_id
                 left join (
@@ -1025,7 +1088,10 @@ def sync_daily_operation(
                         goal_group_key_snapshot = excluded.goal_group_key_snapshot,
                         scheduled_start = excluded.scheduled_start,
                         scheduled_due = excluded.scheduled_due,
-                        status = case when daily_task_instances.status = %s then %s else daily_task_instances.status end,
+                        status = case
+                            when daily_task_instances.status = %(overdue_status)s then %(pending_status)s
+                            else daily_task_instances.status
+                        end,
                         review_status = excluded.review_status,
                         is_critical_snapshot = excluded.is_critical_snapshot,
                         requires_manager_review = excluded.requires_manager_review,
@@ -1034,8 +1100,6 @@ def sync_daily_operation(
                         allow_not_applicable = excluded.allow_not_applicable,
                         is_conditional = excluded.is_conditional,
                         subtasks_total = excluded.subtasks_total,
-                        subtasks_completed = excluded.subtasks_completed,
-                        goal_current = excluded.goal_current,
                         updated_at = now()
                     returning *
                     """,
@@ -1071,6 +1135,8 @@ def sync_daily_operation(
                         "subtasks_total": int(template.get("subtasks_count") or 0),
                         "subtasks_completed": 0,
                         "goal_current": 0,
+                        "overdue_status": TASK_STATUS_OVERDUE,
+                        "pending_status": TASK_STATUS_PENDING,
                     },
                 )
                 inserted = dict(cur.fetchone() or {})
@@ -1139,8 +1205,17 @@ def refresh_alerts(
     operation = get_daily_operation(unit_id, operational_date)
     with get_connection() as connection:
         with connection.cursor() as cur:
-            cur.execute("delete from alerts where unit_id = %s and triggered_at::date = %s and status = 'active'", (unit_id, operational_date))
-            cur.execute("delete from alerts where unit_id = %s and triggered_at::date = %s and status = 'resolved'", (unit_id, operational_date))
+            generated_types = ("TASK_OVERDUE", "CRITICAL_TASK_OVERDUE", "SECTOR_DELAYED")
+            cur.execute(
+                """
+                delete from alerts
+                where unit_id = %s
+                  and triggered_at::date = %s
+                  and status in ('active', 'resolved')
+                  and alert_type = any(%s)
+                """,
+                (unit_id, operational_date, list(generated_types)),
+            )
             for task in tasks:
                 snapshot = task_status_snapshot(task, now)
                 if snapshot.is_overdue:
@@ -1220,10 +1295,10 @@ def refresh_alerts(
 def list_alerts(unit_id: str, status: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
     with get_connection() as connection:
         with connection.cursor() as cur:
-            where = ["unit_id = %s"]
+            where = ["a.unit_id = %s"]
             params: list[Any] = [unit_id]
             if status:
-                where.append("status = %s")
+                where.append("a.status = %s")
                 params.append(status)
             cur.execute(
                 f"""
@@ -1432,6 +1507,35 @@ def block_task(task_id: str, reason_type: str, details: str, actor_user_id: str 
                 (TASK_STATUS_BLOCKED, reason_type, details, task["id"]),
             )
             updated = dict(cur.fetchone() or {})
+            dedup_key = f"TASK_BLOCKED:{task['id']}"
+            cur.execute(
+                """
+                insert into alerts (
+                    organization_id, unit_id, sector_id, daily_task_instance_id, alert_type, severity,
+                    title, description, status, dedup_key, triggered_at, metadata_json, created_at, updated_at
+                ) values (%s, %s, %s, %s, 'TASK_BLOCKED', 'warning', %s, %s, 'active', %s, now(), %s::jsonb, now(), now())
+                on conflict (unit_id, dedup_key) do update set
+                    severity = excluded.severity,
+                    title = excluded.title,
+                    description = excluded.description,
+                    status = 'active',
+                    resolved_at = null,
+                    resolved_by = null,
+                    metadata_json = excluded.metadata_json,
+                    triggered_at = now(),
+                    updated_at = now()
+                """,
+                (
+                    task["organization_id"],
+                    task["unit_id"],
+                    task["sector_id"],
+                    task["id"],
+                    f"Tarefa bloqueada: {task['title_snapshot']}",
+                    details or reason_type,
+                    dedup_key,
+                    _json({"reason_type": reason_type, "reported_by": actor_user_id}),
+                ),
+            )
             _task_event(cur, task, "TASK_BLOCKED", actor_user_id, task, updated, {"reason_type": reason_type, "details": details})
             connection.commit()
             return {"blocker": blocker, "task": updated}
@@ -1581,15 +1685,15 @@ def list_daily_reports(unit_id: str, limit: int = 30) -> list[dict[str, Any]]:
                 """
                 select
                     dr.*,
-                    do.operational_date,
-                    do.status as operation_status,
-                    do.timezone,
-                    do.unit_id,
-                    do.organization_id
+                    op.operational_date,
+                    op.status as operation_status,
+                    op.timezone,
+                    op.unit_id,
+                    op.organization_id
                 from daily_reports dr
-                join daily_operations do on do.id = dr.daily_operation_id
-                where do.unit_id = %s
-                order by do.operational_date desc
+                join daily_operations op on op.id = dr.daily_operation_id
+                where op.unit_id = %s
+                order by op.operational_date desc
                 limit %s
                 """,
                 (unit_id, limit),
@@ -1790,19 +1894,19 @@ def list_history(unit_id: str, start_date: date | None = None, end_date: date | 
             cur.execute(
                 """
                 select
-                    do.operational_date,
-                    do.status as operation_status,
-                    do.timezone,
+                    op.operational_date,
+                    op.status as operation_status,
+                    op.timezone,
                     count(dti.id) as total_tasks,
                     count(*) filter (where dti.status in (%s, %s, %s)) as completed_tasks,
                     count(*) filter (where dti.status = %s or dti.is_late = true) as overdue_tasks,
                     count(*) filter (where dti.status = %s) as blocked_tasks,
                     count(*) filter (where dti.status = %s) as not_applicable_tasks
-                from daily_operations do
-                left join daily_task_instances dti on dti.daily_operation_id = do.id
-                where do.unit_id = %s and do.operational_date between %s and %s
-                group by do.operational_date, do.status, do.timezone
-                order by do.operational_date desc
+                from daily_operations op
+                left join daily_task_instances dti on dti.daily_operation_id = op.id
+                where op.unit_id = %s and op.operational_date between %s and %s
+                group by op.operational_date, op.status, op.timezone
+                order by op.operational_date desc
                 limit %s
                 """,
                 (

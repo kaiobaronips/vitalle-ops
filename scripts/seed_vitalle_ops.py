@@ -13,9 +13,11 @@ if str(SRC) not in sys.path:
 from vitalle_ops.support import load_local_env
 from vitalle_ops.store import (
     sync_daily_operation,
+    upsert_organization,
     upsert_sector,
     upsert_system_setting,
     upsert_task_template,
+    upsert_unit,
     upsert_user,
     upsert_user_profile,
     upsert_user_sector_assignment,
@@ -692,6 +694,26 @@ TEMPLATES = [
 
 
 def seed_core() -> None:
+    upsert_organization(
+        {
+            "id": ORGANIZATION_ID,
+            "name": "Vitalle Odontologia & Harmonização",
+            "slug": "vitalle-odontologia",
+            "timezone": "America/Sao_Paulo",
+            "is_active": True,
+        }
+    )
+    upsert_unit(
+        {
+            "id": UNIT_ID,
+            "organization_id": ORGANIZATION_ID,
+            "name": "Vitalle Principal",
+            "slug": "vitalle-main",
+            "timezone": "America/Sao_Paulo",
+            "is_active": True,
+            "sort_order": 1,
+        }
+    )
     upsert_system_setting(
         {
             "organization_id": ORGANIZATION_ID,
