@@ -19,7 +19,7 @@ type TaskBoardItem = {
 };
 
 const defaultColumns: KanbanColumn[] = [
-  { id: 'todo', title: 'Tarefas do dia', kind: 'todo' },
+  { id: 'todo', title: 'Tarefas', kind: 'todo' },
   { id: 'doing', title: 'Em andamento', kind: 'doing' },
   { id: 'done', title: 'Realizadas', kind: 'done' },
   { id: 'finished', title: 'Finalizadas', kind: 'finished' },
