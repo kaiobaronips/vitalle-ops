@@ -168,6 +168,7 @@ export type TaskInstance = {
   display_state?: string;
   display_label?: string;
   overdue_minutes?: number;
+  is_overdue?: boolean;
   comments?: TaskComment[];
   goals?: TaskGoalEntry[];
   evidences?: TaskEvidence[];

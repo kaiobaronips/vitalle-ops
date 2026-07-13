@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { completeTaskAction, startTaskAction } from '@/app/vitalle-actions';
 import type { TaskInstance } from '@/lib/vitalle-types';
@@ -42,6 +42,31 @@ function statusLabel(task: TaskInstance) {
   return task.status.replaceAll('_', ' ');
 }
 
+function taskDateTime(operationalDate: string, timeValue: string) {
+  const date = String(operationalDate || '').slice(0, 10);
+  const time = String(timeValue || '').slice(0, 8) || '00:00:00';
+  const parsed = new Date(`${date}T${time}`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function timingBadgeClass(task: TaskInstance, now: Date) {
+  const status = task.status.toUpperCase();
+  const isFinished = ['COMPLETED', 'JUSTIFIED', 'NOT_APPLICABLE'].includes(status);
+  if (isFinished) return 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200';
+
+  const dueAt = taskDateTime(task.operational_date, task.scheduled_due);
+  if (!dueAt) return 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200';
+
+  const minutesToDue = Math.ceil((dueAt.getTime() - now.getTime()) / 60000);
+  if (task.display_state === 'OVERDUE' || task.is_overdue || task.is_late || minutesToDue < 0) {
+    return 'bg-rose-100 text-rose-800 ring-1 ring-rose-200';
+  }
+
+  if (minutesToDue <= 30) return 'bg-amber-100 text-amber-800 ring-1 ring-amber-200';
+
+  return 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200';
+}
+
 function actionFormData(taskId: string, comment = '') {
   const formData = new FormData();
   formData.set('id', taskId);
@@ -62,8 +87,14 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
   const [draggedTaskId, setDraggedTaskId] = useState<string>('');
   const [message, setMessage] = useState('');
   const [celebration, setCelebration] = useState<CelebrationKind | null>(null);
+  const [now, setNow] = useState(() => new Date());
   const celebrationTimer = useRef<number | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(new Date()), 60000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   const taskCountByColumn = useMemo(() => {
     return columns.reduce<Record<string, number>>((acc, column) => {
@@ -261,7 +292,7 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
                         <span>
                           {shortTime(task.scheduled_start)} - {shortTime(task.scheduled_due)}
                         </span>
-                        <span className="rounded-full bg-[#f6f1ea] px-2.5 py-1">{statusLabel(task)}</span>
+                        <span className={`rounded-full px-2.5 py-1 ${timingBadgeClass(task, now)}`}>{statusLabel(task)}</span>
                       </div>
                     </div>
                   ))}
