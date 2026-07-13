@@ -1,4 +1,12 @@
 import { getVitalleAuthHeaders } from './vitalle-session';
+import {
+  canUseDirectDatabase,
+  getDirectMe,
+  getDirectSectors,
+  getDirectTaskTemplates,
+  saveDirectSector,
+  saveDirectTaskTemplate,
+} from './vitalle-db-direct';
 import type {
   Alert,
   AuditEvent,
@@ -66,6 +74,20 @@ async function getRaw<T>(path: string, fallback: T): Promise<ApiResult<T>> {
   }
 }
 
+async function directOrApi<T>(loader: () => Promise<T | null>, path: string, fallback: T): Promise<ApiResult<T>> {
+  if (canUseDirectDatabase()) {
+    try {
+      const data = await loader();
+      if (data) {
+        return { data, offline: false, status: 200 };
+      }
+    } catch (error) {
+      console.warn('vitalle_direct_db_failed', path, error);
+    }
+  }
+  return getRaw<T>(path, fallback);
+}
+
 async function mutate<T>(path: string, method: 'POST' | 'PATCH' | 'DELETE', body?: unknown): Promise<ApiMutationResult<T>> {
   try {
     const requestHeaders = await headers();
@@ -87,7 +109,7 @@ async function mutate<T>(path: string, method: 'POST' | 'PATCH' | 'DELETE', body
 }
 
 export async function getVitalleMe(): Promise<ApiResult<PrincipalContext>> {
-  return getRaw<PrincipalContext>('/v1/vitalle/me', {
+  const fallback = {
     principal: {
       role: '',
       user_id: '',
@@ -103,7 +125,8 @@ export async function getVitalleMe(): Promise<ApiResult<PrincipalContext>> {
     timezone: 'America/Sao_Paulo',
     sectors: [],
     settings: [],
-  });
+  };
+  return directOrApi<PrincipalContext>(getDirectMe, '/v1/vitalle/me', fallback);
 }
 
 export async function getVitalleDashboard(): Promise<ApiResult<DashboardSummary>> {
@@ -141,7 +164,7 @@ export async function getVitalleMeuDia(): Promise<ApiResult<DashboardSummary>> {
 }
 
 export async function getVitalleSectors(): Promise<ApiResult<PageResponse<Sector>>> {
-  return getRaw<PageResponse<Sector>>('/v1/vitalle/setores', { items: [] });
+  return directOrApi<PageResponse<Sector>>(getDirectSectors, '/v1/vitalle/setores', { items: [] });
 }
 
 export async function getVitalleSector(slug: string): Promise<ApiResult<SectorDetail>> {
@@ -181,7 +204,7 @@ export async function getVitalleAudit(): Promise<ApiResult<PageResponse<AuditEve
 }
 
 export async function getVitalleTaskTemplates(): Promise<ApiResult<PageResponse<TaskTemplate>>> {
-  return getRaw<PageResponse<TaskTemplate>>('/v1/vitalle/admin/tarefas', { items: [] });
+  return directOrApi<PageResponse<TaskTemplate>>(getDirectTaskTemplates, '/v1/vitalle/admin/tarefas', { items: [] });
 }
 
 export async function getVitalleTaskTemplate(taskTemplateId: string): Promise<ApiResult<TaskTemplate>> {
@@ -210,6 +233,14 @@ export async function getVitalleSettings(): Promise<ApiResult<PageResponse<Syste
 }
 
 export async function saveVitalleTaskTemplate(payload: Record<string, unknown>): Promise<ApiMutationResult<TaskTemplate>> {
+  if (canUseDirectDatabase()) {
+    try {
+      const data = await saveDirectTaskTemplate(payload);
+      return { ok: true, status: 200, data, message: 'Operação concluída.' };
+    } catch (error) {
+      console.warn('vitalle_direct_db_mutation_failed', '/v1/vitalle/admin/tarefas', error);
+    }
+  }
   return mutate<TaskTemplate>('/v1/vitalle/admin/tarefas', 'POST', payload);
 }
 
@@ -226,6 +257,14 @@ export async function activateVitalleTaskTemplate(taskTemplateId: string): Promi
 }
 
 export async function saveVitalleSector(payload: Record<string, unknown>): Promise<ApiMutationResult<Sector>> {
+  if (canUseDirectDatabase()) {
+    try {
+      const data = await saveDirectSector(payload);
+      return { ok: true, status: 200, data, message: 'Operação concluída.' };
+    } catch (error) {
+      console.warn('vitalle_direct_db_mutation_failed', '/v1/vitalle/admin/setores', error);
+    }
+  }
   return mutate<Sector>('/v1/vitalle/admin/setores', 'POST', payload);
 }
 
