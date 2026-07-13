@@ -194,6 +194,9 @@ export function AdminSectorTaskBoard({
               <header className="mb-3 flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h3 className="truncate text-base font-semibold text-[#252525]">{sector.name}</h3>
+                  {sector.description ? (
+                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">{sector.description}</p>
+                  ) : null}
                   <p className="mt-1 text-xs font-semibold text-slate-500">{sectorTasks.length} tarefa(s)</p>
                 </div>
                 <button
