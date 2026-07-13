@@ -70,9 +70,22 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
   }, [columns, items]);
 
   function moveTask(taskId: string, column: KanbanColumn) {
+    const currentItem = items.find((item) => item.task.id === taskId);
+    const currentColumn = columns.find((itemColumn) => itemColumn.id === currentItem?.columnId);
+    if (!currentItem || !currentColumn || currentItem.columnId === column.id) return;
+
+    if (currentColumn.kind === 'finished' && column.kind !== 'finished') {
+      setMessage('Tarefas finalizadas não podem ser movidas para outro bloco.');
+      return;
+    }
+
+    if (currentColumn.kind === 'doing' && column.kind !== 'doing' && column.kind !== 'finished') {
+      setMessage('Tarefas em andamento só podem ser movidas para Finalizadas.');
+      return;
+    }
+
     setItems((current) => current.map((item) => (item.task.id === taskId ? { ...item, columnId: column.id } : item)));
-    const task = items.find((item) => item.task.id === taskId)?.task;
-    if (!task) return;
+    const task = currentItem.task;
 
     startTransition(async () => {
       setMessage('');
