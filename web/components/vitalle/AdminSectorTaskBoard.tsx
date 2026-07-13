@@ -196,7 +196,9 @@ export function AdminSectorTaskBoard({
                   <div className="min-w-0">
                     <h3 className="truncate text-base font-semibold text-[#252525]">{sector.name}</h3>
                     {sector.description ? (
-                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">{sector.description}</p>
+                      <div className="mt-2 rounded-lg border border-[#e5ded3] bg-white/80 px-3 py-2 shadow-sm">
+                        <p className="whitespace-normal break-words text-xs leading-5 text-slate-700">{sector.description}</p>
+                      </div>
                     ) : null}
                     <p className="mt-1 text-xs font-semibold text-slate-500">{sectorTasks.length} tarefa(s)</p>
                   </div>
