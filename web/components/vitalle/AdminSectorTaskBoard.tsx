@@ -148,7 +148,13 @@ function TaskQuickCreateModal({
   );
 }
 
-function TaskTemplateCard({ task }: { task: TaskTemplate }) {
+function TaskTemplateCard({
+  task,
+  onRequestRemove,
+}: {
+  task: TaskTemplate;
+  onRequestRemove: (task: TaskTemplate) => void;
+}) {
   const active = task.active !== false && !task.archived_at;
   return (
     <div className="rounded-lg border border-[#ded8cf] bg-white p-3 shadow-sm">
@@ -163,15 +169,62 @@ function TaskTemplateCard({ task }: { task: TaskTemplate }) {
         <span>
           {shortTime(task.start_time)} - {shortTime(task.due_time)}
         </span>
-        <form action={archiveTaskAction as unknown as (formData: FormData) => void}>
-          <input type="hidden" name="id" value={task.id} />
+        <button
+          type="button"
+          onClick={() => onRequestRemove(task)}
+          className="grid h-7 w-7 place-items-center rounded-full bg-rose-600 text-base font-bold leading-none text-white shadow-sm transition hover:bg-rose-700"
+          aria-label={`Remover ${task.title}`}
+          title="Remover tarefa"
+        >
+          -
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function RemoveTaskModal({
+  task,
+  onClose,
+}: {
+  task: TaskTemplate;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[130] grid place-items-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
+        <div className="grid h-12 w-12 place-items-center rounded-full bg-rose-100 text-2xl font-bold text-rose-700">
+          !
+        </div>
+        <h2 className="mt-4 text-xl font-semibold text-slate-950">Atenção</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          Tem certeza que deseja remover esta tarefa do setor?
+        </p>
+        <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <p className="text-sm font-semibold text-slate-950">{task.title}</p>
+          <p className="mt-1 text-xs text-slate-500">
+            {shortTime(task.start_time)} - {shortTime(task.due_time)}
+          </p>
+        </div>
+
+        <div className="mt-5 flex items-center justify-end gap-3">
           <button
-            type="submit"
-            className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[0.68rem] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400"
           >
-            Remover
+            Cancelar
           </button>
-        </form>
+          <form action={archiveTaskAction as unknown as (formData: FormData) => void}>
+            <input type="hidden" name="id" value={task.id} />
+            <button
+              type="submit"
+              className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700"
+            >
+              Confirmar remoção
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
@@ -185,6 +238,7 @@ export function AdminSectorTaskBoard({
   tasks: TaskTemplate[];
 }) {
   const [selectedSector, setSelectedSector] = useState<Sector | null>(null);
+  const [taskToRemove, setTaskToRemove] = useState<TaskTemplate | null>(null);
   const tasksBySector = useMemo(() => {
     return tasks.reduce<Record<string, TaskTemplate[]>>((acc, task) => {
       if (task.active === false || task.archived_at) return acc;
@@ -227,7 +281,7 @@ export function AdminSectorTaskBoard({
 
                 <div className="grid gap-3">
                   {sectorTasks.length ? (
-                    sectorTasks.map((task) => <TaskTemplateCard key={task.id} task={task} />)
+                    sectorTasks.map((task) => <TaskTemplateCard key={task.id} task={task} onRequestRemove={setTaskToRemove} />)
                   ) : (
                     <div className="rounded-lg border border-dashed border-[#d8d0c4] bg-white/70 p-4 text-sm text-slate-500">
                       Nenhuma tarefa cadastrada neste setor.
@@ -242,6 +296,10 @@ export function AdminSectorTaskBoard({
 
       {selectedSector ? (
         <TaskQuickCreateModal sector={selectedSector} sectors={sectors} onClose={() => setSelectedSector(null)} />
+      ) : null}
+
+      {taskToRemove ? (
+        <RemoveTaskModal task={taskToRemove} onClose={() => setTaskToRemove(null)} />
       ) : null}
     </>
   );
