@@ -168,7 +168,7 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
                         event.dataTransfer.setData('text/plain', task.id);
                       }}
                       onDragEnd={() => setDraggedTaskId('')}
-                      className="group rounded-lg border border-[#ded8cf] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                      className="group rounded-lg border border-[#ded8cf] bg-white p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                     >
                       <div className="flex items-start gap-3">
                         <button
@@ -185,14 +185,14 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
                           ✓
                         </button>
                         <div className="min-w-0 flex-1">
-                          <h4 className="text-base font-semibold leading-snug text-[#252525]">{task.title_snapshot}</h4>
-                          <p className="mt-2 text-sm leading-6 text-[var(--stone)]">
+                          <h4 className="text-sm font-semibold leading-snug text-[#252525]">{task.title_snapshot}</h4>
+                          <p className="mt-1.5 text-xs leading-5 text-[var(--stone)]">
                             {task.description_snapshot || task.sector_name_snapshot}
                           </p>
                         </div>
                       </div>
 
-                      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-[var(--stone)]">
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[0.68rem] font-semibold text-[var(--stone)]">
                         <span>
                           {shortTime(task.scheduled_start)} - {shortTime(task.scheduled_due)}
                         </span>
