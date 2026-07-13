@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { OpsShell } from '@/components/vitalle/OpsShell';
 import { StatusPill } from '@/components/vitalle/VitalleCards';
 import { getVitalleMe } from '@/lib/vitalle-api';
@@ -8,6 +9,9 @@ export const dynamic = 'force-dynamic';
 export default async function SetoresPage() {
   const meResult = await getVitalleMe();
   const me = meResult.data;
+  if (me.admin_like) {
+    redirect('/admin/setores');
+  }
 
   return (
     <OpsShell principal={me} title="Setores" subtitle="Visão dos setores configurados na unidade.">

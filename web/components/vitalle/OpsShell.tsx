@@ -28,7 +28,7 @@ const opsItems: NavItem[] = [
 
 const adminItems: NavItem[] = [
   { href: '/dashboard', label: 'Visão Geral', icon: 'layout' },
-  { href: '/setores', label: 'Setores', icon: 'layers' },
+  { href: '/admin/setores', label: 'Setores', icon: 'layers' },
   { href: '/historico', label: 'Historico', icon: 'history' },
   { href: '/admin/configuracoes', label: 'Configuração', icon: 'settings' },
 ];
