@@ -15,22 +15,24 @@ type OpsShellProps = {
 type NavItem = {
   href: string;
   label: string;
-  icon: string;
+  icon: IconName;
 };
 
 const opsItems: NavItem[] = [
-  { href: '/setores/avaliador', label: 'Avaliador', icon: 'A' },
-  { href: '/setores/asb', label: 'Auxiliar em Saude Bucal (ASB)', icon: 'B' },
-  { href: '/setores/secretaria-recepcao', label: 'Secretaria / Recepção', icon: 'S' },
-  { href: '/setores/marketing-comercial', label: 'Marketing / Comercial', icon: 'M' },
+  { href: '/setores/avaliador', label: 'Avaliador', icon: 'clipboard' },
+  { href: '/setores/asb', label: 'Auxiliar em Saude Bucal (ASB)', icon: 'tooth' },
+  { href: '/setores/secretaria-recepcao', label: 'Secretaria / Recepção', icon: 'calendar' },
+  { href: '/setores/marketing-comercial', label: 'Marketing / Comercial', icon: 'megaphone' },
 ];
 
 const adminItems: NavItem[] = [
-  { href: '/dashboard', label: 'Visão Geral', icon: '□' },
-  { href: '/setores', label: 'Setores', icon: '◌' },
-  { href: '/historico', label: 'Historico', icon: '◷' },
-  { href: '/admin/configuracoes', label: 'Configuração', icon: '⚙' },
+  { href: '/dashboard', label: 'Visão Geral', icon: 'layout' },
+  { href: '/setores', label: 'Setores', icon: 'layers' },
+  { href: '/historico', label: 'Historico', icon: 'history' },
+  { href: '/admin/configuracoes', label: 'Configuração', icon: 'settings' },
 ];
+
+type IconName = 'calendar' | 'clipboard' | 'history' | 'layers' | 'layout' | 'logout' | 'megaphone' | 'settings' | 'tooth';
 
 function navItems(adminLike: boolean) {
   return adminLike ? adminItems : opsItems;
@@ -54,6 +56,76 @@ function VitalleMark() {
   );
 }
 
+function NavIcon({ name }: { name: IconName }) {
+  const common = {
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    strokeWidth: 1.8,
+  };
+
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[18px] w-[18px]">
+      {name === 'calendar' ? (
+        <>
+          <rect x="4" y="5" width="16" height="15" rx="2" {...common} />
+          <path d="M8 3v4M16 3v4M4 10h16" {...common} />
+        </>
+      ) : null}
+      {name === 'clipboard' ? (
+        <>
+          <path d="M9 4h6l1 2h2a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 18 20H6a1.5 1.5 0 0 1-1.5-1.5v-11A1.5 1.5 0 0 1 6 6h2l1-2Z" {...common} />
+          <path d="M9 13h6M9 16h4" {...common} />
+        </>
+      ) : null}
+      {name === 'history' ? (
+        <>
+          <path d="M4 12a8 8 0 1 0 2.35-5.66L4 8.7" {...common} />
+          <path d="M4 4.5V8.7h4.2M12 8v4l2.6 1.6" {...common} />
+        </>
+      ) : null}
+      {name === 'layers' ? (
+        <>
+          <path d="m12 3 8 4-8 4-8-4 8-4Z" {...common} />
+          <path d="m4 12 8 4 8-4M4 17l8 4 8-4" {...common} />
+        </>
+      ) : null}
+      {name === 'layout' ? (
+        <>
+          <rect x="4" y="4" width="7" height="7" rx="1.5" {...common} />
+          <rect x="13" y="4" width="7" height="7" rx="1.5" {...common} />
+          <rect x="4" y="13" width="7" height="7" rx="1.5" {...common} />
+          <rect x="13" y="13" width="7" height="7" rx="1.5" {...common} />
+        </>
+      ) : null}
+      {name === 'logout' ? (
+        <>
+          <path d="M10 6H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4" {...common} />
+          <path d="M14 8l4 4-4 4M18 12H9" {...common} />
+        </>
+      ) : null}
+      {name === 'megaphone' ? (
+        <>
+          <path d="M5 13h3l9 4V7l-9 4H5a2 2 0 0 0 0 4Z" {...common} />
+          <path d="m8 15 1.2 4H12" {...common} />
+        </>
+      ) : null}
+      {name === 'settings' ? (
+        <>
+          <path d="M12 8.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Z" {...common} />
+          <path d="m19 12 1.5-1.2-1.6-2.8-1.9.7a7.3 7.3 0 0 0-1.5-.9L15.2 6h-3.4l-.3 1.8c-.5.2-1 .5-1.5.9L8.1 8l-1.6 2.8L8 12l-1.5 1.2L8.1 16l1.9-.7c.5.4 1 .7 1.5.9l.3 1.8h3.4l.3-1.8c.5-.2 1-.5 1.5-.9l1.9.7 1.6-2.8L19 12Z" {...common} />
+        </>
+      ) : null}
+      {name === 'tooth' ? (
+        <>
+          <path d="M8.5 4.4c1.4 0 2.1.9 3.5.9s2.1-.9 3.5-.9c2.1 0 3.5 1.8 3.2 4.1-.2 1.8-1.1 3.4-1.8 5-.9 2-1.3 5.1-3 5.1-1.2 0-1.1-2.4-1.9-2.4s-.7 2.4-1.9 2.4c-1.7 0-2.1-3.1-3-5.1-.7-1.6-1.6-3.2-1.8-5-.3-2.3 1.1-4.1 3.2-4.1Z" {...common} />
+        </>
+      ) : null}
+    </svg>
+  );
+}
+
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
@@ -65,8 +137,8 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
       }`}
     >
       {active ? <span className="absolute left-0 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-full bg-[var(--gold)]" /> : null}
-      <span className={`grid h-5 w-5 place-items-center text-xs ${active ? 'text-[var(--gold)]' : 'text-[var(--bone-40)]'}`}>
-        {item.icon}
+      <span className={`grid h-5 w-5 place-items-center ${active ? 'text-[var(--gold)]' : 'text-[var(--bone-40)]'}`}>
+        <NavIcon name={item.icon} />
       </span>
       <span className="leading-tight">{item.label}</span>
     </Link>
@@ -106,7 +178,9 @@ export function OpsShell({ children, principal, title, subtitle, accentLabel: _a
               type="submit"
               className="flex min-h-12 w-full items-center gap-3 rounded-md px-4 py-3 text-left text-sm text-[var(--bone-60)] transition-colors hover:bg-white/[0.025] hover:text-[var(--bone)]"
             >
-              <span className="grid h-5 w-5 place-items-center text-lg text-[var(--bone-40)]">↳</span>
+              <span className="grid h-5 w-5 place-items-center text-[var(--bone-40)]">
+                <NavIcon name="logout" />
+              </span>
               Sair
             </button>
           </form>
