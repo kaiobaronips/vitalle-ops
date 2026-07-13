@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { logoutAction } from '@/app/vitalle-actions';
 import type { PrincipalContext } from '@/lib/vitalle-types';
@@ -46,14 +47,6 @@ function activeItem(title: string, item: NavItem) {
   const normalizedTitle = normalize(title);
   const normalizedLabel = normalize(item.label);
   return normalizedTitle.includes(normalizedLabel.split(' ')[0]);
-}
-
-function VitalleMark() {
-  return (
-    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-[var(--gold)]/35 text-[var(--gold)]">
-      <span className="display text-3xl leading-none">V</span>
-    </div>
-  );
 }
 
 function NavIcon({ name }: { name: IconName }) {
@@ -153,12 +146,8 @@ export function OpsShell({ children, principal, title, subtitle, accentLabel: _a
     <div className="min-h-screen bg-[var(--bone)] text-[var(--noir)] lg:flex">
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-[278px] flex-col bg-[var(--ink)] text-[var(--bone)] lg:flex">
         <div className="border-b border-white/[0.06] px-8 pb-8 pt-9">
-          <Link href="/" className="flex items-center gap-4">
-            <VitalleMark />
-            <span className="leading-none">
-              <span className="display block text-[1.8rem] tracking-[0.16em] text-[var(--bone)]">VITALLE</span>
-              <span className="mt-2 block text-[0.62rem] uppercase tracking-[0.26em] text-[var(--bone-40)]">Odontologia</span>
-            </span>
+          <Link href="/" className="block rounded-xl bg-[var(--bone)] px-4 py-3">
+            <Image src="/brand/vitalle-logo.png" alt="Vitalle Odontologia & Harmonização" width={738} height={177} priority className="h-auto w-full" />
           </Link>
         </div>
 

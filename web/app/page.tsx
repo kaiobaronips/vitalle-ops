@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { opsLoginAction } from '@/app/vitalle-actions';
 import { getSessionToken } from '@/lib/session';
@@ -18,13 +19,7 @@ export default async function HomePage() {
       <section className="mx-auto flex min-h-screen w-full max-w-4xl items-center justify-center px-6 py-10">
         <div className="w-full max-w-md text-center">
           <div className="flex flex-col items-center">
-            <div className="brand-mark" aria-hidden="true">
-              V
-            </div>
-            <p className="mt-6 font-display text-4xl tracking-[0.18em] text-[var(--bone)]">VITALLE</p>
-            <p className="mt-3 text-[0.66rem] uppercase tracking-[0.35em] text-[var(--bone-40)]">
-              Odontologia & Harmonização
-            </p>
+            <Image src="/brand/vitalle-logo.png" alt="Vitalle Odontologia & Harmonização" width={738} height={177} priority className="auth-logo" />
           </div>
 
           <div className="mt-16 grid gap-4 sm:grid-cols-2">
