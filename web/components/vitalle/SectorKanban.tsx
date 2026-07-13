@@ -135,7 +135,7 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
       {message ? <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{message}</p> : null}
 
       <div className="overflow-x-auto pb-3">
-        <div className="grid min-h-[32rem] min-w-[980px] grid-flow-col auto-cols-[minmax(250px,1fr)] gap-3">
+        <div className="grid min-h-[32rem] min-w-[1120px] grid-flow-col auto-cols-[minmax(280px,1fr)] gap-3">
           {columns.map((column) => (
             <article
               key={column.id}
@@ -185,8 +185,8 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
                           ✓
                         </button>
                         <div className="min-w-0 flex-1">
-                          <h4 className="line-clamp-2 text-base font-semibold leading-snug text-[#252525]">{task.title_snapshot}</h4>
-                          <p className="mt-1 line-clamp-2 text-sm text-[var(--stone)]">
+                          <h4 className="text-base font-semibold leading-snug text-[#252525]">{task.title_snapshot}</h4>
+                          <p className="mt-2 text-sm leading-6 text-[var(--stone)]">
                             {task.description_snapshot || task.sector_name_snapshot}
                           </p>
                         </div>
