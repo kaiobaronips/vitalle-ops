@@ -26,6 +26,22 @@ function SubmitButton() {
   );
 }
 
+function PencilIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5">
+      <path
+        d="M4 20h4.2L19 9.2 14.8 5 4 15.8V20Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <path d="m13.8 6 4.2 4.2" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
 function TaskQuickCreateModal({
   sector,
   sectors,
@@ -149,11 +165,141 @@ function TaskQuickCreateModal({
   );
 }
 
+function TaskEditModal({
+  task,
+  sectors,
+  onClose,
+  onUpdated,
+}: {
+  task: TaskTemplate;
+  sectors: Sector[];
+  onClose: () => void;
+  onUpdated: () => void;
+}) {
+  const router = useRouter();
+  const [state, action, isPending] = useActionState(saveTaskTemplateAction, initialActionState);
+
+  useEffect(() => {
+    if (!state.ok) return;
+    onUpdated();
+    router.refresh();
+  }, [onUpdated, router, state.ok]);
+
+  return (
+    <div className="fixed inset-0 z-[125] grid place-items-center bg-slate-950/40 px-4 py-6 backdrop-blur-sm">
+      <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+        <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Editar tarefa</p>
+            <h2 className="mt-1 text-xl font-semibold text-slate-950">{task.title}</h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isPending}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-slate-200 text-xl leading-none text-slate-600 transition hover:border-slate-400 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+            aria-label="Fechar edição"
+          >
+            ×
+          </button>
+        </header>
+
+        <form action={action} className="grid gap-5 p-5">
+          <input type="hidden" name="id" value={task.id} />
+          <input type="hidden" name="sector_id" value={task.sector_id} />
+          <input type="hidden" name="task_type" value={task.task_type || 'STANDARD'} />
+          <input type="hidden" name="default_assignee_id" value={task.default_assignee_id || ''} />
+          <input type="hidden" name="start_time" value={shortTime(task.start_time)} />
+          <input type="hidden" name="due_time" value={shortTime(task.due_time)} />
+          <input type="hidden" name="priority" value={task.priority || 'NORMAL'} />
+          <input type="hidden" name="goal_target" value={task.goal_target || ''} />
+          <input type="hidden" name="goal_unit" value={task.goal_unit || ''} />
+          <input type="hidden" name="goal_group_key" value={task.goal_group_key || ''} />
+          <input type="hidden" name="interval_value" value="1" />
+          <input type="hidden" name="weekdays" value="" />
+          <input type="hidden" name="month_days" value="" />
+          <input type="hidden" name="weeks_of_month" value="" />
+          <input type="hidden" name="end_date" value={task.end_date || ''} />
+          <input type="hidden" name="instructions" value={task.instructions || ''} />
+          <input type="hidden" name="subtasks" value="" />
+          <input type="hidden" name="is_critical" value={task.is_critical ? 'on' : ''} />
+          <input type="hidden" name="requires_comment_on_completion" value={task.requires_comment_on_completion ? 'on' : ''} />
+          <input type="hidden" name="requires_evidence" value={task.requires_evidence ? 'on' : ''} />
+          <input type="hidden" name="requires_manager_review" value={task.requires_manager_review ? 'on' : ''} />
+          <input type="hidden" name="allow_not_applicable" value={task.allow_not_applicable === false ? 'off' : 'on'} />
+          <input type="hidden" name="is_conditional" value={task.is_conditional ? 'on' : ''} />
+          <input type="hidden" name="active" value="on" />
+          <input type="hidden" name="recurrence_type" value={task.recurrence_type || 'DAILY'} />
+          <input type="hidden" name="start_date" value={task.start_date || today()} />
+
+          <label className="grid gap-1 text-sm font-semibold text-slate-700">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Setor</span>
+            <select name="sector_id_disabled" value={task.sector_id} disabled className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+              {sectors.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="grid gap-1 text-sm font-semibold text-slate-700">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Título</span>
+            <input name="title" required defaultValue={task.title} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
+          </label>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="grid gap-1 text-sm font-semibold text-slate-700">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Horário de início</span>
+              <input value={shortTime(task.start_time)} disabled className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500" />
+            </label>
+            <label className="grid gap-1 text-sm font-semibold text-slate-700">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Horário do fim</span>
+              <input value={shortTime(task.due_time)} disabled className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500" />
+            </label>
+          </div>
+
+          <label className="grid gap-1 text-sm font-semibold text-slate-700">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Descrição da tarefa</span>
+            <textarea name="description" rows={8} defaultValue={task.description || ''} className="min-h-44 rounded-lg border border-slate-300 bg-white px-3 py-3 text-sm leading-6" />
+          </label>
+
+          {state.message ? (
+            <p className={`rounded-lg px-3 py-2 text-sm ${state.ok ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800'}`}>
+              {state.message}
+            </p>
+          ) : null}
+
+          <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isPending}
+              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isPending ? 'Salvando...' : 'Salvar edição'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function TaskTemplateCard({
   task,
+  onRequestEdit,
   onRequestRemove,
 }: {
   task: TaskTemplate;
+  onRequestEdit: (task: TaskTemplate) => void;
   onRequestRemove: (task: TaskTemplate) => void;
 }) {
   return (
@@ -169,15 +315,26 @@ function TaskTemplateCard({
         <span>
           {shortTime(task.start_time)} - {shortTime(task.due_time)}
         </span>
-        <button
-          type="button"
-          onClick={() => onRequestRemove(task)}
-          className="grid h-7 w-7 place-items-center rounded-full bg-rose-600 text-base font-bold leading-none text-white shadow-sm transition hover:bg-rose-700"
-          aria-label={`Remover ${task.title}`}
-          title="Remover tarefa"
-        >
-          -
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => onRequestEdit(task)}
+            className="grid h-7 w-7 place-items-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-slate-400 hover:text-slate-950"
+            aria-label={`Editar ${task.title}`}
+            title="Editar tarefa"
+          >
+            <PencilIcon />
+          </button>
+          <button
+            type="button"
+            onClick={() => onRequestRemove(task)}
+            className="grid h-7 w-7 place-items-center rounded-full bg-rose-600 text-base font-bold leading-none text-white shadow-sm transition hover:bg-rose-700"
+            aria-label={`Remover ${task.title}`}
+            title="Remover tarefa"
+          >
+            -
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -257,6 +414,7 @@ export function AdminSectorTaskBoard({
   tasks: TaskTemplate[];
 }) {
   const [selectedSector, setSelectedSector] = useState<Sector | null>(null);
+  const [taskToEdit, setTaskToEdit] = useState<TaskTemplate | null>(null);
   const [taskToRemove, setTaskToRemove] = useState<TaskTemplate | null>(null);
   const [removedTaskIds, setRemovedTaskIds] = useState<Set<string>>(new Set());
   const tasksBySector = useMemo(() => {
@@ -277,6 +435,10 @@ export function AdminSectorTaskBoard({
   function handleRemoved(taskId: string) {
     setRemovedTaskIds((current) => new Set(current).add(taskId));
     setTaskToRemove(null);
+  }
+
+  function handleUpdated() {
+    setTaskToEdit(null);
   }
 
   return (
@@ -313,7 +475,9 @@ export function AdminSectorTaskBoard({
 
                 <div className="grid gap-3">
                   {sectorTasks.length ? (
-                    sectorTasks.map((task) => <TaskTemplateCard key={task.id} task={task} onRequestRemove={setTaskToRemove} />)
+                    sectorTasks.map((task) => (
+                      <TaskTemplateCard key={task.id} task={task} onRequestEdit={setTaskToEdit} onRequestRemove={setTaskToRemove} />
+                    ))
                   ) : (
                     <div className="rounded-lg border border-dashed border-[#d8d0c4] bg-white/70 p-4 text-sm text-slate-500">
                       Nenhuma tarefa cadastrada neste setor.
@@ -328,6 +492,10 @@ export function AdminSectorTaskBoard({
 
       {selectedSector ? (
         <TaskQuickCreateModal sector={selectedSector} sectors={sectors} onClose={() => setSelectedSector(null)} />
+      ) : null}
+
+      {taskToEdit ? (
+        <TaskEditModal task={taskToEdit} sectors={sectors} onClose={() => setTaskToEdit(null)} onUpdated={handleUpdated} />
       ) : null}
 
       {taskToRemove ? (
