@@ -826,6 +826,70 @@ def archive_task_template(template_id: str, active: bool, actor_user_id: str | N
             return dict(cur.fetchone() or {})
 
 
+def remove_task_template_everywhere(template_id: str, unit_id: str, actor_user_id: str | None = None) -> dict[str, Any]:
+    with get_connection() as connection:
+        with connection.cursor() as cur:
+            cur.execute(
+                """
+                select *
+                from task_templates
+                where id = %s
+                  and unit_id = %s
+                limit 1
+                """,
+                (template_id, unit_id),
+            )
+            template = dict(cur.fetchone() or {})
+            if not template:
+                return {}
+
+            cur.execute(
+                """
+                select id::text as id
+                from daily_task_instances
+                where task_template_id = %s
+                  and unit_id = %s
+                """,
+                (template_id, unit_id),
+            )
+            daily_task_ids = [str(row["id"]) for row in cur.fetchall()]
+            if daily_task_ids:
+                cur.execute(
+                    """
+                    delete from audit_events
+                    where unit_id = %s
+                      and (
+                        (entity_type = 'daily_task_instance' and entity_id = any(%s))
+                        or entity_id = %s
+                      )
+                    """,
+                    (unit_id, daily_task_ids, template_id),
+                )
+            else:
+                cur.execute(
+                    """
+                    delete from audit_events
+                    where unit_id = %s
+                      and entity_id = %s
+                    """,
+                    (unit_id, template_id),
+                )
+
+            recurrence_rule_id = template.get("recurrence_rule_id")
+            cur.execute(
+                """
+                delete from task_templates
+                where id = %s
+                  and unit_id = %s
+                """,
+                (template_id, unit_id),
+            )
+            if recurrence_rule_id:
+                cur.execute("delete from task_recurrence_rules where id = %s", (recurrence_rule_id,))
+            connection.commit()
+            return template
+
+
 def get_daily_operation(unit_id: str, operational_date: date) -> dict[str, Any]:
     with get_connection() as connection:
         with connection.cursor() as cur:

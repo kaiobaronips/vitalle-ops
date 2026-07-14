@@ -85,6 +85,7 @@ export type TaskTemplate = {
   sector_id: string;
   sector_name?: string;
   sector_slug?: string;
+  recurrence_rule_id?: string | null;
   title: string;
   description: string;
   task_type: string;

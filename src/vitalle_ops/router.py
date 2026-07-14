@@ -42,6 +42,7 @@ from vitalle_ops.store import (
     list_user_sector_assignments,
     list_users,
     mark_not_applicable,
+    remove_task_template_everywhere,
     reopen_task,
     resolve_alert,
     refresh_alerts,
@@ -508,6 +509,17 @@ def admin_arquivar_tarefa(template_id: str, principal: APIPrincipal = Depends(_p
     if not archived:
         raise HTTPException(status_code=404, detail="Template not found")
     return _success(archived)
+
+
+@router.delete("/admin/tarefas/{template_id}")
+def admin_remover_tarefa(template_id: str, principal: APIPrincipal = Depends(_principal_guard)):
+    scope = _resolve_scope(principal)
+    if not _is_admin_like(principal):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    removed = remove_task_template_everywhere(template_id, scope["unit_id"], actor_user_id=_actor_user_id(principal, scope))
+    if not removed:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return _success(removed)
 
 
 @router.post("/admin/tarefas/{template_id}/ativar")

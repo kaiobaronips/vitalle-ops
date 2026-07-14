@@ -311,7 +311,7 @@ export async function removeVitalleTaskTemplateEverywhere(taskTemplateId: string
       console.warn('vitalle_direct_db_mutation_failed', 'task_templates.remove_everywhere', error);
     }
   }
-  return archiveVitalleTaskTemplate(taskTemplateId);
+  return mutate<TaskTemplate>(`/v1/vitalle/admin/tarefas/${taskTemplateId}`, 'DELETE');
 }
 
 export async function blockVitalleTask(taskId: string, reasonType: string, details: string): Promise<ApiMutationResult<Record<string, unknown>>> {
