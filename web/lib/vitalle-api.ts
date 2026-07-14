@@ -2,6 +2,7 @@ import { getVitalleAuthHeaders } from './vitalle-session';
 import {
   canUseDirectDatabase,
   deleteDirectDailyTask,
+  getDirectSectorRewardSummary,
   getDirectMe,
   getDirectSectors,
   getDirectTaskTemplates,
@@ -19,6 +20,7 @@ import type {
   Report,
   Sector,
   SectorDetail,
+  SectorRewardDaySummary,
   SystemSetting,
   TaskInstance,
   TaskTemplate,
@@ -195,6 +197,41 @@ export async function getVitalleHistory(startDate?: string, endDate?: string): P
   if (startDate) params.set('start_date', startDate);
   if (endDate) params.set('end_date', endDate);
   return getRaw<PageResponse<HistoryItem>>(`/v1/vitalle/historico${params.toString() ? `?${params.toString()}` : ''}`, { items: [] });
+}
+
+export async function getVitalleSectorRewardSummary(
+  sectorId: string,
+  startDate: string,
+  endDate: string,
+): Promise<ApiResult<PageResponse<SectorRewardDaySummary>>> {
+  if (canUseDirectDatabase()) {
+    try {
+      const data = await getDirectSectorRewardSummary(sectorId, startDate, endDate);
+      return { data, offline: false, status: 200 };
+    } catch (error) {
+      console.warn('vitalle_direct_db_failed', 'sector-reward-summary', error);
+    }
+  }
+
+  const history = await getVitalleHistory(startDate, endDate);
+  const items = (history.data.items ?? []).flatMap((item) => {
+    const sector = (item.sectors ?? []).find((historySector) => historySector.sector_id === sectorId);
+    if (!sector) return [];
+    return [
+      {
+        operational_date: String(item.operational_date).slice(0, 10),
+        total_tasks: Number(sector.total_tasks ?? 0),
+        completed_tasks: Number(sector.completed_tasks ?? 0),
+      },
+    ];
+  });
+
+  return {
+    data: { items },
+    offline: history.offline,
+    status: history.status,
+    message: history.message,
+  };
 }
 
 export async function getVitalleReports(): Promise<ApiResult<PageResponse<Report>>> {

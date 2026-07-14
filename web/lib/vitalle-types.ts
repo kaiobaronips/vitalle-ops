@@ -330,6 +330,12 @@ export type HistoryItem = {
   }>;
 };
 
+export type SectorRewardDaySummary = {
+  operational_date: string;
+  total_tasks: number;
+  completed_tasks: number;
+};
+
 export type AuditEvent = {
   id: string;
   organization_id: string;

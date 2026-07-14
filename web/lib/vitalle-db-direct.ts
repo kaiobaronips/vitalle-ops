@@ -2,7 +2,7 @@ import 'server-only';
 
 import { Pool, type PoolClient } from 'pg';
 import { getVitalleDevSession } from './vitalle-session';
-import type { PageResponse, PrincipalContext, Sector, SystemSetting, TaskInstance, TaskTemplate } from './vitalle-types';
+import type { PageResponse, PrincipalContext, Sector, SectorRewardDaySummary, SystemSetting, TaskInstance, TaskTemplate } from './vitalle-types';
 
 const organizationId = 'vitalle-odontologia';
 const unitId = 'vitalle-main';
@@ -405,4 +405,27 @@ export async function removeDirectTaskTemplateEverywhere(templateId: string): Pr
 
   if (!removedTemplate) throw new Error('Tarefa não encontrada.');
   return removedTemplate;
+}
+
+export async function getDirectSectorRewardSummary(
+  sectorId: string,
+  startDate: string,
+  endDate: string,
+): Promise<PageResponse<SectorRewardDaySummary>> {
+  const items = await query<SectorRewardDaySummary>(
+    `
+    select
+      operational_date::text as operational_date,
+      count(*)::int as total_tasks,
+      count(*) filter (where status in ('COMPLETED', 'JUSTIFIED', 'NOT_APPLICABLE'))::int as completed_tasks
+    from daily_task_instances
+    where unit_id = $1
+      and sector_id = $2
+      and operational_date between $3 and $4
+    group by operational_date
+    order by operational_date asc
+    `,
+    [unitId, sectorId, startDate, endDate],
+  );
+  return { items };
 }
