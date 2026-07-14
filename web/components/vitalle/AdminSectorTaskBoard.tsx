@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { removeSectorTaskAction, saveTaskTemplateAction, type ActionState } from '@/app/vitalle-actions';
 import type { Sector, TaskTemplate } from '@/lib/vitalle-types';
 
@@ -185,10 +186,21 @@ function TaskTemplateCard({
 function RemoveTaskModal({
   task,
   onClose,
+  onRemoved,
 }: {
   task: TaskTemplate;
   onClose: () => void;
+  onRemoved: (taskId: string) => void;
 }) {
+  const router = useRouter();
+  const [state, action, isPending] = useActionState(removeSectorTaskAction, initialActionState);
+
+  useEffect(() => {
+    if (!state.ok) return;
+    onRemoved(task.id);
+    router.refresh();
+  }, [onRemoved, router, state.ok, task.id]);
+
   return (
     <div className="fixed inset-0 z-[130] grid place-items-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
@@ -206,21 +218,29 @@ function RemoveTaskModal({
           </p>
         </div>
 
+        {state.message ? (
+          <p className={`mt-4 rounded-lg px-3 py-2 text-sm ${state.ok ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800'}`}>
+            {state.message}
+          </p>
+        ) : null}
+
         <div className="mt-5 flex items-center justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
+            disabled={isPending}
             className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400"
           >
             Cancelar
           </button>
-          <form action={removeSectorTaskAction as unknown as (formData: FormData) => void}>
+          <form action={action}>
             <input type="hidden" name="id" value={task.id} />
             <button
               type="submit"
-              className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700"
+              disabled={isPending}
+              className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Confirmar remoção
+              {isPending ? 'Removendo...' : 'Confirmar remoção'}
             </button>
           </form>
         </div>
@@ -238,9 +258,10 @@ export function AdminSectorTaskBoard({
 }) {
   const [selectedSector, setSelectedSector] = useState<Sector | null>(null);
   const [taskToRemove, setTaskToRemove] = useState<TaskTemplate | null>(null);
+  const [removedTaskIds, setRemovedTaskIds] = useState<Set<string>>(new Set());
   const tasksBySector = useMemo(() => {
     const visibleTasks = tasks
-      .filter((task) => task.active !== false && !task.archived_at)
+      .filter((task) => task.active !== false && !task.archived_at && !removedTaskIds.has(task.id))
       .sort((a, b) => {
         const left = `${shortTime(a.start_time)}-${shortTime(a.due_time)}-${a.title}`;
         const right = `${shortTime(b.start_time)}-${shortTime(b.due_time)}-${b.title}`;
@@ -251,7 +272,12 @@ export function AdminSectorTaskBoard({
       acc[task.sector_id] = [...(acc[task.sector_id] ?? []), task];
       return acc;
     }, {});
-  }, [tasks]);
+  }, [removedTaskIds, tasks]);
+
+  function handleRemoved(taskId: string) {
+    setRemovedTaskIds((current) => new Set(current).add(taskId));
+    setTaskToRemove(null);
+  }
 
   return (
     <>
@@ -305,7 +331,7 @@ export function AdminSectorTaskBoard({
       ) : null}
 
       {taskToRemove ? (
-        <RemoveTaskModal task={taskToRemove} onClose={() => setTaskToRemove(null)} />
+        <RemoveTaskModal task={taskToRemove} onClose={() => setTaskToRemove(null)} onRemoved={handleRemoved} />
       ) : null}
     </>
   );

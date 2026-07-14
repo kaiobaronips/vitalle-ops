@@ -363,7 +363,7 @@ export async function removeDailyTaskAction(formData: FormData): Promise<ActionS
   return { ok: true, message: 'Tarefa removida.' };
 }
 
-export async function removeSectorTaskAction(formData: FormData): Promise<ActionState> {
+export async function removeSectorTaskAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const result = await removeVitalleTaskTemplateEverywhere(text(formData, 'id'));
   if (!result.ok) return { ok: false, message: result.message };
   await revalidateVitalle();
