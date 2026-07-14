@@ -320,7 +320,7 @@ function TaskTemplateCard({
           <button
             type="button"
             onClick={() => onRequestEdit(task)}
-            className="grid h-8 w-8 place-items-center rounded-full border border-[#c99b55] bg-[var(--gold)] text-[#14110d] shadow-sm transition hover:bg-[#c0924e] hover:text-[#14110d]"
+            className="grid h-8 w-8 place-items-center text-slate-600 transition hover:text-slate-950"
             aria-label={`Editar ${task.title}`}
             title="Editar tarefa"
           >
