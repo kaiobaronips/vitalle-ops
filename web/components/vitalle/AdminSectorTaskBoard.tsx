@@ -28,16 +28,17 @@ function SubmitButton() {
 
 function PencilIcon() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5">
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[18px] w-[18px]">
       <path
-        d="M4 20h4.2L19 9.2 14.8 5 4 15.8V20Z"
+        d="M5 19h4.2L19.4 8.8a2 2 0 0 0 0-2.8L18 4.6a2 2 0 0 0-2.8 0L5 14.8V19Z"
         fill="none"
         stroke="currentColor"
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeWidth="1.8"
+        strokeWidth="2.2"
       />
-      <path d="m13.8 6 4.2 4.2" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+      <path d="m13.8 6 4.2 4.2" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2.2" />
+      <path d="M5 14.8 9.2 19" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2.2" />
     </svg>
   );
 }
@@ -319,7 +320,7 @@ function TaskTemplateCard({
           <button
             type="button"
             onClick={() => onRequestEdit(task)}
-            className="grid h-7 w-7 place-items-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-slate-400 hover:text-slate-950"
+            className="grid h-8 w-8 place-items-center rounded-full border border-[#c99b55] bg-[var(--gold)] text-[#14110d] shadow-sm transition hover:bg-[#c0924e] hover:text-[#14110d]"
             aria-label={`Editar ${task.title}`}
             title="Editar tarefa"
           >
