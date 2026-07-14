@@ -26,8 +26,8 @@
   --color-bone: var(--bone);
   --color-paper: var(--paper);
   --color-line: var(--line);
-  --font-display: var(--font-cormorant);
-  --font-sans: var(--font-inter);
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-sans: Inter, "Aptos", system-ui, sans-serif;
 }
 
 * {
@@ -43,7 +43,7 @@ html {
 body {
   min-height: 100%;
   margin: 0;
-  font-family: var(--font-inter), "Aptos", system-ui, sans-serif;
+  font-family: Inter, "Aptos", system-ui, sans-serif;
   color: var(--noir);
   background: var(--bone);
   -webkit-font-smoothing: antialiased;
@@ -59,11 +59,11 @@ body {
 }
 
 .font-display {
-  font-family: var(--font-cormorant), Georgia, serif;
+  font-family: "Cormorant Garamond", Georgia, serif;
 }
 
 .display {
-  font-family: var(--font-cormorant), Georgia, serif;
+  font-family: "Cormorant Garamond", Georgia, serif;
 }
 
 .eyebrow {
@@ -74,7 +74,7 @@ body {
 }
 
 .metric-figure {
-  font-family: var(--font-cormorant), Georgia, serif;
+  font-family: "Cormorant Garamond", Georgia, serif;
   font-weight: 500;
   font-variant-numeric: lining-nums tabular-nums;
 }

@@ -626,6 +626,27 @@ def list_task_template_subtasks(template_id: str) -> list[dict[str, Any]]:
             return [dict(row) for row in cur.fetchall()]
 
 
+def list_task_template_subtasks_for_templates(template_ids: list[str]) -> dict[str, list[dict[str, Any]]]:
+    if not template_ids:
+        return {}
+    with get_connection() as connection:
+        with connection.cursor() as cur:
+            cur.execute(
+                """
+                select id, task_template_id, title, sort_order, is_required, created_at, updated_at
+                from task_template_subtasks
+                where task_template_id = any(%s)
+                order by task_template_id asc, sort_order asc, id asc
+                """,
+                (template_ids,),
+            )
+            subtasks_by_template: dict[str, list[dict[str, Any]]] = {}
+            for row in cur.fetchall():
+                subtask = dict(row)
+                subtasks_by_template.setdefault(str(subtask["task_template_id"]), []).append(subtask)
+            return subtasks_by_template
+
+
 def upsert_task_template(payload: dict[str, Any]) -> dict[str, Any]:
     with get_connection() as connection:
         with connection.cursor() as cur:
@@ -1031,6 +1052,7 @@ def sync_daily_operation(
 ) -> dict[str, Any]:
     operation = upsert_daily_operation(organization_id, unit_id, operational_date, timezone_name, sync_source)
     templates = list_task_templates(unit_id)
+    subtasks_by_template = list_task_template_subtasks_for_templates([template["id"] for template in templates])
     now = now_in_tz(timezone_name)
 
     with get_connection() as connection:
@@ -1140,13 +1162,11 @@ def sync_daily_operation(
                     },
                 )
                 inserted = dict(cur.fetchone() or {})
-                template_subtasks = list_task_template_subtasks(template["id"])
+                template_subtasks = subtasks_by_template.get(str(template["id"]), [])
                 if template_subtasks:
                     _ensure_subtasks(cur, inserted, template_subtasks)
             connection.commit()
 
-    refresh_task_runtime_state(unit_id, operational_date, timezone_name, actor_user_id=actor_user_id)
-    refresh_alerts(unit_id, operational_date, timezone_name, actor_user_id=actor_user_id)
     return get_daily_operation_summary(unit_id, operational_date, timezone_name)
 
 
@@ -1157,40 +1177,32 @@ def refresh_task_runtime_state(
     actor_user_id: str | None = None,
 ) -> None:
     now = now_in_tz(timezone_name)
-    tasks = list_daily_task_instances(unit_id, operational_date)
     with get_connection() as connection:
         with connection.cursor() as cur:
-            for task in tasks:
-                snapshot = task_status_snapshot(task, now)
-                is_late = snapshot.is_overdue or (
-                    task.get("completed_at") is not None and late_minutes_from_completion(task, task.get("completed_at")) > 0
-                )
-                late_minutes = snapshot.overdue_minutes if snapshot.is_overdue else late_minutes_from_completion(task, task.get("completed_at"))
-                status = task["status"]
-                if snapshot.is_overdue and status in {TASK_STATUS_PENDING, TASK_STATUS_IN_PROGRESS}:
-                    status = TASK_STATUS_OVERDUE
-                cur.execute(
-                    """
-                    update daily_task_instances
-                    set is_late = %s,
-                        late_minutes = %s,
-                        status = case
-                            when status = %s then %s
-                            when status = %s then status
-                            else status
-                        end,
-                        updated_at = now()
-                    where id = %s
-                    """,
-                    (
-                        is_late,
-                        late_minutes,
-                        TASK_STATUS_PENDING,
-                        status,
-                        TASK_STATUS_COMPLETED,
-                        task["id"],
+            cur.execute(
+                """
+                update daily_task_instances
+                set is_late = true,
+                    late_minutes = greatest(
+                        0,
+                        floor(extract(epoch from (%(current_time)s::time - scheduled_due)) / 60)::int
                     ),
-                )
+                    status = %(overdue_status)s,
+                    updated_at = now()
+                where unit_id = %(unit_id)s
+                  and operational_date = %(operational_date)s
+                  and status in (%(pending_status)s, %(in_progress_status)s)
+                  and scheduled_due < %(current_time)s::time
+                """,
+                {
+                    "current_time": now.time(),
+                    "unit_id": unit_id,
+                    "operational_date": operational_date,
+                    "pending_status": TASK_STATUS_PENDING,
+                    "in_progress_status": TASK_STATUS_IN_PROGRESS,
+                    "overdue_status": TASK_STATUS_OVERDUE,
+                },
+            )
 
 
 def refresh_alerts(
