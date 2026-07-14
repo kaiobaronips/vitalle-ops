@@ -11,9 +11,9 @@ function shortTime(value?: string | null) {
 
 function TaskCountCard({ label, value, detail }: { label: string; value: number | string; detail: string }) {
   return (
-    <article className="rounded-xl border border-[#e7dfd4] bg-white px-5 py-4 shadow-sm">
+    <article className="rounded-xl border border-[#e7dfd4] bg-white px-4 py-4 shadow-sm sm:px-5">
       <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-      <p className="mt-3 font-display text-4xl leading-none text-[#17130f]">{value}</p>
+      <p className="mt-3 break-words font-display text-3xl leading-none text-[#17130f] sm:text-4xl">{value}</p>
       <div className="mt-4 h-px w-14 bg-[var(--gold)]" />
       <p className="mt-3 text-sm text-slate-600">{detail}</p>
     </article>
@@ -93,21 +93,21 @@ export default async function DashboardPage() {
 
       <section className="grid gap-5 xl:grid-cols-[1fr_1fr]">
         <article className="rounded-xl border border-[#e7dfd4] bg-white p-5 shadow-sm">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-500">Setores</p>
               <h2 className="mt-1 text-xl font-semibold text-[#17130f]">Base por setor</h2>
             </div>
-            <Link href="/admin/setores" className="rounded-lg border border-[#d9cbb8] px-3 py-2 text-sm font-semibold text-[#17130f] transition hover:border-[#c99b55]">
+            <Link href="/admin/setores" className="w-full rounded-lg border border-[#d9cbb8] px-3 py-2 text-center text-sm font-semibold text-[#17130f] transition hover:border-[#c99b55] sm:w-auto">
               Ver setores
             </Link>
           </div>
 
           <div className="mt-5 grid gap-3">
             {summary.map((item) => (
-              <div key={item.sector.id} className="flex items-center justify-between gap-4 rounded-lg border border-[#eee7dc] bg-[#fbfaf8] px-4 py-3">
+              <div key={item.sector.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#eee7dc] bg-[#fbfaf8] px-4 py-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-[#17130f]">{item.sector.name}</p>
+                  <p className="break-words text-sm font-semibold text-[#17130f]">{item.sector.name}</p>
                   <p className="mt-1 text-xs text-slate-500">{item.range}</p>
                 </div>
                 <span className="shrink-0 rounded-full bg-[#17130f] px-3 py-1 text-xs font-semibold text-white">
@@ -119,12 +119,12 @@ export default async function DashboardPage() {
         </article>
 
         <article className="rounded-xl border border-[#e7dfd4] bg-white p-5 shadow-sm">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-500">Agenda</p>
               <h2 className="mt-1 text-xl font-semibold text-[#17130f]">Primeiras tarefas do dia</h2>
             </div>
-            <Link href="/admin/configuracoes" className="rounded-lg border border-[#d9cbb8] px-3 py-2 text-sm font-semibold text-[#17130f] transition hover:border-[#c99b55]">
+            <Link href="/admin/configuracoes" className="w-full rounded-lg border border-[#d9cbb8] px-3 py-2 text-center text-sm font-semibold text-[#17130f] transition hover:border-[#c99b55] sm:w-auto">
               Configurar
             </Link>
           </div>
@@ -132,11 +132,11 @@ export default async function DashboardPage() {
           <div className="mt-5 grid gap-3">
             {nextTasks.length ? (
               nextTasks.map((task) => (
-                <div key={task.id} className="grid grid-cols-[4.5rem_1fr] gap-3 rounded-lg border border-[#eee7dc] bg-[#fbfaf8] px-4 py-3">
+                <div key={task.id} className="grid grid-cols-[3.75rem_1fr] gap-3 rounded-lg border border-[#eee7dc] bg-[#fbfaf8] px-4 py-3 sm:grid-cols-[4.5rem_1fr]">
                   <p className="text-sm font-semibold text-[#17130f]">{shortTime(task.start_time)}</p>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-[#17130f]">{task.title}</p>
-                    <p className="mt-1 truncate text-xs text-slate-500">{task.sector_name}</p>
+                    <p className="break-words text-sm font-semibold text-[#17130f]">{task.title}</p>
+                    <p className="mt-1 break-words text-xs text-slate-500">{task.sector_name}</p>
                   </div>
                 </div>
               ))

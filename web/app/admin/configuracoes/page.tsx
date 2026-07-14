@@ -30,9 +30,9 @@ export default async function AdminConfiguracoesPage() {
           <Link
             key={option.href}
             href={option.href}
-            className="rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-7"
+            className="rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-5 sm:p-7"
           >
-            <h2 className="display text-4xl leading-none text-[var(--noir)]">{option.title}</h2>
+            <h2 className="display text-3xl leading-none text-[var(--noir)] sm:text-4xl">{option.title}</h2>
             <p className="mt-5 max-w-xl text-sm leading-6 text-[var(--stone)]">{option.description}</p>
             <div className="gold-rule mt-6 w-20" />
             <span className="mt-7 inline-flex rounded-full border border-[var(--line)] px-5 py-2 text-sm font-semibold text-[var(--noir)] transition hover:-translate-y-0.5 hover:border-[var(--gold)] hover:shadow-sm">

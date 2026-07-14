@@ -16,28 +16,28 @@ export default async function HomePage() {
 
   return (
     <main className="auth-page">
-      <section className="mx-auto flex min-h-screen w-full max-w-4xl items-center justify-center px-6 py-10">
+      <section className="mx-auto flex min-h-screen w-full max-w-4xl items-center justify-center px-5 py-8 sm:px-6 sm:py-10">
         <div className="w-full max-w-md text-center">
           <div className="auth-wordmark" aria-label="Vitalle Odontologia & Harmonização">
             <Image src="/brand/vitalle-tooth.png" alt="" width={547} height={539} priority className="auth-tooth-logo" />
-            <p className="display mt-7 text-[2.15rem] tracking-[0.22em] text-[var(--bone)]">VITALLE</p>
-            <p className="mt-4 text-[0.68rem] uppercase tracking-[0.42em] text-[var(--bone-40)]">
+            <p className="display mt-6 text-[1.9rem] tracking-[0.2em] text-[var(--bone)] sm:mt-7 sm:text-[2.15rem] sm:tracking-[0.22em]">VITALLE</p>
+            <p className="mt-3 text-[0.62rem] uppercase tracking-[0.32em] text-[var(--bone-40)] sm:mt-4 sm:text-[0.68rem] sm:tracking-[0.42em]">
               Odontologia & Harmonização
             </p>
           </div>
 
-          <div className="mx-auto mt-16 grid max-w-[330px] grid-cols-2 gap-4">
+          <div className="mx-auto mt-12 grid max-w-[310px] grid-cols-2 gap-3 sm:mt-16 sm:max-w-[330px] sm:gap-4">
             <Link href="/login" className="auth-choice">
-              <span className="display text-[1.8rem] tracking-[0.04em]">ADM</span>
+              <span className="display text-[1.55rem] tracking-[0.04em] sm:text-[1.8rem]">ADM</span>
             </Link>
             <form action={opsLoginAction}>
               <button type="submit" className="auth-choice">
-                <span className="display text-[1.8rem] tracking-[0.04em]">OPS</span>
+                <span className="display text-[1.55rem] tracking-[0.04em] sm:text-[1.8rem]">OPS</span>
               </button>
             </form>
           </div>
 
-          <p className="mt-14 text-sm text-[var(--bone-40)]">Escolha o perfil de acesso para continuar.</p>
+          <p className="mt-10 text-sm text-[var(--bone-40)] sm:mt-14">Escolha o perfil de acesso para continuar.</p>
         </div>
       </section>
     </main>

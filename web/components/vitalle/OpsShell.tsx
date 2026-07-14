@@ -138,6 +138,34 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
+function MobileNav({ items, title, activeFallback }: { items: NavItem[]; title: string; activeFallback: string }) {
+  return (
+    <nav className="border-b border-[var(--line)] bg-[var(--bone)]/95 lg:hidden">
+      <div className="flex gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {items.map((item) => {
+          const active = activeItem(title || activeFallback, item) || (!title && item.label === activeFallback);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex min-h-10 min-w-max items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-semibold transition-colors ${
+                active
+                  ? 'border-[var(--gold)] bg-[#17130f] text-white shadow-sm'
+                  : 'border-[#e1d9ce] bg-white text-[#3a332b] hover:border-[var(--gold)]'
+              }`}
+            >
+              <span className={`grid h-4 w-4 shrink-0 place-items-center ${active ? 'text-[var(--gold)]' : 'text-[var(--stone)]'}`}>
+                <NavIcon name={item.icon} />
+              </span>
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
 export function OpsShell({ children, principal, title, subtitle, accentLabel: _accentLabel = 'VITALLE OPS', headerAction }: OpsShellProps) {
   const items = navItems(principal.admin_like);
   const activeFallback = principal.admin_like ? 'Visão Geral' : '';
@@ -181,23 +209,24 @@ export function OpsShell({ children, principal, title, subtitle, accentLabel: _a
 
       <div className="min-w-0 flex-1 lg:ml-[278px]">
         <header className="sticky top-0 z-30 border-b border-[var(--line)] bg-[var(--bone)]/90 backdrop-blur-md">
-          <div className="flex min-h-[5.25rem] items-center justify-between gap-4 px-5 py-4 lg:px-10">
-            <div>
-              <h1 className="display text-3xl leading-none text-[var(--noir)]">{title}</h1>
-              {subtitle ? <p className="mt-2 text-sm text-[var(--stone)]">{subtitle}</p> : null}
+          <div className="flex min-h-[4.75rem] items-center justify-between gap-3 px-4 py-3 sm:px-5 lg:min-h-[5.25rem] lg:px-10 lg:py-4">
+            <div className="min-w-0">
+              <h1 className="display truncate text-2xl leading-none text-[var(--noir)] sm:text-3xl">{title}</h1>
+              {subtitle ? <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-[var(--stone)] sm:mt-2 sm:text-sm">{subtitle}</p> : null}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex shrink-0 items-center gap-2 sm:gap-3">
               {headerAction}
               <form action={logoutAction} className="lg:hidden">
-                <button type="submit" className="rounded-full border border-[var(--line)] bg-[var(--paper)] px-4 py-2 text-sm text-[var(--noir)]">
+                <button type="submit" className="rounded-full border border-[var(--line)] bg-[var(--paper)] px-3 py-2 text-xs font-semibold text-[var(--noir)] sm:px-4 sm:text-sm">
                   Sair
                 </button>
               </form>
             </div>
           </div>
+          <MobileNav items={items} title={title} activeFallback={activeFallback} />
         </header>
 
-        <main className="px-5 py-8 lg:px-10">
+        <main className="px-4 py-5 sm:px-5 sm:py-7 lg:px-10 lg:py-8">
           <div className="mx-auto max-w-[1400px] space-y-7">{children}</div>
         </main>
       </div>

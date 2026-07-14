@@ -137,6 +137,27 @@ body {
     0 14px 34px rgba(0, 0, 0, 0.24);
 }
 
+@media (max-width: 640px) {
+  .auth-tooth-logo {
+    width: 3.25rem;
+  }
+
+  .auth-choice {
+    min-height: 4.75rem;
+    border-radius: 1rem;
+  }
+
+  .auth-input {
+    border-radius: 1rem;
+    padding: 1rem 1.1rem;
+  }
+
+  .auth-button {
+    min-height: 3.35rem;
+    border-radius: 1rem;
+  }
+}
+
 .auth-choice::before {
   content: "";
   position: absolute;

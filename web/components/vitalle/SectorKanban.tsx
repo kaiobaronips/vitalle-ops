@@ -206,12 +206,12 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+        <div className="min-w-0">
           <p className="eyebrow text-[var(--stone)]">Kanban operacional</p>
-          <h2 className="display mt-2 text-3xl text-[var(--noir)]">Tarefas do dia</h2>
+          <h2 className="display mt-2 text-2xl text-[var(--noir)] sm:text-3xl">Tarefas do dia</h2>
         </div>
-        <div className="flex w-full max-w-md gap-2 sm:w-auto">
+        <div className="flex w-full gap-2 sm:w-auto sm:max-w-md">
           <input
             value={newColumnTitle}
             onChange={(event) => setNewColumnTitle(event.target.value)}
@@ -230,8 +230,8 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
 
       {message ? <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{message}</p> : null}
 
-      <div className="pb-3">
-        <div className="grid min-h-[32rem] grid-cols-1 gap-3 lg:grid-cols-3">
+      <div className="overflow-x-auto pb-3">
+        <div className="grid min-h-[29rem] grid-flow-col auto-cols-[minmax(17rem,calc(100vw-2rem))] gap-3 sm:auto-cols-[19rem] lg:grid-flow-row lg:grid-cols-3 lg:auto-cols-auto">
           {columns.map((column) => (
             <article
               key={column.id}
@@ -282,7 +282,7 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
                         </button>
                         <div className="min-w-0 flex-1">
                           <h4 className="text-sm font-semibold leading-snug text-[#252525]">{task.title_snapshot}</h4>
-                          <p className="mt-1.5 text-xs leading-5 text-[var(--stone)]">
+                          <p className="mt-1.5 break-words text-xs leading-5 text-[var(--stone)]">
                             {task.description_snapshot || task.sector_name_snapshot}
                           </p>
                         </div>

@@ -152,7 +152,7 @@ function TaskQuickCreateModal({
             </p>
           ) : null}
 
-          <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
+          <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-end">
             <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400">
               Cancelar
             </button>
@@ -252,11 +252,11 @@ function TaskEditModal({
           <div className="grid gap-4 md:grid-cols-2">
             <label className="grid gap-1 text-sm font-semibold text-slate-700">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Horário de início</span>
-              <input value={shortTime(task.start_time)} disabled className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500" />
+              <input value={shortTime(task.start_time)} readOnly disabled className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500" />
             </label>
             <label className="grid gap-1 text-sm font-semibold text-slate-700">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Horário do fim</span>
-              <input value={shortTime(task.due_time)} disabled className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500" />
+              <input value={shortTime(task.due_time)} readOnly disabled className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500" />
             </label>
           </div>
 
@@ -271,7 +271,7 @@ function TaskEditModal({
             </p>
           ) : null}
 
-          <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
+          <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-end">
             <button
               type="button"
               onClick={onClose}
@@ -382,7 +382,7 @@ function RemoveTaskModal({
           </p>
         ) : null}
 
-        <div className="mt-5 flex items-center justify-end gap-3">
+        <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
           <button
             type="button"
             onClick={onClose}
@@ -396,7 +396,7 @@ function RemoveTaskModal({
             <button
               type="submit"
               disabled={isPending}
-              className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
               {isPending ? 'Removendo...' : 'Confirmar remoção'}
             </button>
@@ -445,7 +445,7 @@ export function AdminSectorTaskBoard({
   return (
     <>
       <section className="overflow-x-auto pb-3">
-        <div className="grid min-h-[32rem] grid-flow-col auto-cols-[minmax(18rem,calc(100vw-2.5rem))] gap-3 sm:auto-cols-[20rem] xl:auto-cols-[22rem]">
+        <div className="grid min-h-[29rem] grid-flow-col auto-cols-[minmax(17rem,calc(100vw-2rem))] gap-3 sm:min-h-[32rem] sm:auto-cols-[20rem] xl:auto-cols-[22rem]">
           {sectors.map((sector) => {
             const sectorTasks = tasksBySector[sector.id] ?? [];
             return (
@@ -453,7 +453,7 @@ export function AdminSectorTaskBoard({
                 <header className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <h3 className="truncate text-base font-semibold text-[#252525]">{sector.name}</h3>
-                    <div className="mt-2 min-h-28 rounded-lg border border-[#14110d] bg-[#14110d] px-3 py-2 shadow-sm">
+                    <div className="mt-2 min-h-24 rounded-lg border border-[#14110d] bg-[#14110d] px-3 py-2 shadow-sm sm:min-h-28">
                       <p className="whitespace-normal break-words text-xs leading-5 text-white">
                         {sector.description || 'Descrição do setor não informada.'}
                       </p>
