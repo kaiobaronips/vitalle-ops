@@ -1,3 +1,5 @@
+import Image from 'next/image';
+
 export type CandyRewardDay = {
   date: string;
   label: string;
@@ -11,24 +13,16 @@ function CandyIcon({ complete }: { complete: boolean }) {
   return (
     <span
       aria-hidden="true"
-      className={`relative grid h-5 w-7 shrink-0 place-items-center transition ${
-        complete ? 'opacity-100 drop-shadow-[0_5px_10px_rgba(201,158,103,0.3)]' : 'opacity-35'
+      className={`relative grid h-6 w-7 shrink-0 place-items-center transition ${
+        complete ? 'opacity-100 drop-shadow-[0_5px_10px_rgba(20,17,13,0.28)]' : 'opacity-25'
       }`}
     >
-      <span
-        className={`absolute left-0 h-3 w-3 rounded-[0.3rem] rotate-45 ${
-          complete ? 'bg-[#c99e67]' : 'border border-[#3a332b] bg-transparent'
-        }`}
-      />
-      <span
-        className={`h-4 w-5 rounded-full border ${
-          complete ? 'border-[#a37d4c] bg-gradient-to-br from-[#f0cf90] to-[#c99e67]' : 'border-[#3a332b] bg-transparent'
-        }`}
-      />
-      <span
-        className={`absolute right-0 h-3 w-3 rounded-[0.3rem] rotate-45 ${
-          complete ? 'bg-[#c99e67]' : 'border border-[#3a332b] bg-transparent'
-        }`}
+      <Image
+        src="/brand/bombom.png"
+        alt=""
+        width={360}
+        height={265}
+        className="h-auto w-7"
       />
     </span>
   );
