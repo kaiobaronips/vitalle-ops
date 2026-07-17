@@ -79,6 +79,17 @@ export default async function HistoricoPage({ searchParams }: { searchParams?: P
                         <div>
                           <p className="font-medium text-slate-950">{task.title}</p>
                           {task.blocker_details ? <p className="mt-1 text-xs text-rose-700">{task.blocker_details}</p> : null}
+                          {(task.comments ?? []).filter((comment) => comment.comment_type === 'observation').length ? (
+                            <div className="mt-2 grid gap-1.5">
+                              {(task.comments ?? [])
+                                .filter((comment) => comment.comment_type === 'observation')
+                                .map((comment) => (
+                                  <p key={comment.id} className="rounded-lg border border-[#eadfce] bg-[#fbfaf8] px-3 py-2 text-xs leading-5 text-slate-700">
+                                    <span className="font-semibold text-slate-950">Observação:</span> {comment.body}
+                                  </p>
+                                ))}
+                            </div>
+                          ) : null}
                         </div>
                         <span className="text-xs text-slate-500">{shortTime(task.scheduled_start)} - {shortTime(task.scheduled_due)}</span>
                         <span className={`w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${task.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800' : task.status === 'BLOCKED' ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-700'}`}>

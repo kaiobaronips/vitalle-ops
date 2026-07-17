@@ -671,6 +671,21 @@ def concluir_tarefa(task_id: str, payload: TaskActionInput, principal: APIPrinci
     return _success(updated)
 
 
+@router.post("/tarefas/{task_id}/comentarios")
+def comentar_tarefa(task_id: str, payload: TaskActionInput, principal: APIPrincipal = Depends(_principal_guard)):
+    scope = _resolve_scope(principal)
+    task = get_daily_task_instance(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if not scope["admin_like"] and scope["accessible_sector_ids"] and task["sector_id"] not in scope["accessible_sector_ids"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    body = (payload.comment or payload.note or payload.details or "").strip()
+    if not body:
+        raise HTTPException(status_code=400, detail="Comentário obrigatório")
+    comment = add_task_comment(task_id, body, actor_user_id=_actor_user_id(principal, scope), comment_type="observation")
+    return _success(comment)
+
+
 @router.post("/tarefas/{task_id}/bloquear")
 def bloquear_tarefa(task_id: str, payload: TaskActionInput, principal: APIPrincipal = Depends(_principal_guard)):
     scope = _resolve_scope(principal)

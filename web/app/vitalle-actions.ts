@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import {
   addVitalleGoalEntry,
+  addVitalleTaskComment,
   archiveVitalleTaskTemplate,
   activateVitalleTaskTemplate,
   blockVitalleTask,
@@ -354,6 +355,15 @@ export async function completeTaskAction(formData: FormData): Promise<ActionStat
   if (!result.ok) return { ok: false, message: result.message };
   await revalidateVitalle();
   return { ok: true, message: 'Tarefa concluída.' };
+}
+
+export async function addTaskObservationAction(formData: FormData): Promise<ActionState> {
+  const comment = text(formData, 'comment');
+  if (!comment) return { ok: false, message: 'Digite a observação da tarefa.' };
+  const result = await addVitalleTaskComment(text(formData, 'id'), comment);
+  if (!result.ok) return { ok: false, message: result.message };
+  await revalidateVitalle();
+  return { ok: true, message: 'Observação salva.' };
 }
 
 export async function removeDailyTaskAction(formData: FormData): Promise<ActionState> {

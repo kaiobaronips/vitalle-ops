@@ -2,7 +2,7 @@ import 'server-only';
 
 import { Pool, type PoolClient } from 'pg';
 import { getVitalleDevSession } from './vitalle-session';
-import type { PageResponse, PrincipalContext, Sector, SectorRewardDaySummary, SystemSetting, TaskInstance, TaskTemplate } from './vitalle-types';
+import type { PageResponse, PrincipalContext, Sector, SectorRewardDaySummary, SystemSetting, TaskComment, TaskInstance, TaskTemplate } from './vitalle-types';
 
 const organizationId = 'vitalle-odontologia';
 const unitId = 'vitalle-main';
@@ -376,6 +376,25 @@ export async function deleteDirectDailyTask(taskId: string): Promise<TaskInstanc
   const task = rows[0];
   if (!task) throw new Error('Tarefa não encontrada.');
   return task;
+}
+
+export async function addDirectTaskComment(taskId: string, body: string, commentType = 'observation'): Promise<TaskComment> {
+  const cleanBody = body.trim();
+  if (!cleanBody) throw new Error('Observação obrigatória.');
+  const rows = await query<TaskComment>(
+    `
+    insert into task_comments (daily_task_instance_id, user_id, comment_type, body)
+    select id, null, $3, $4
+    from daily_task_instances
+    where id::text = $1
+      and unit_id = $2
+    returning id, daily_task_instance_id, user_id, comment_type, body, created_at
+    `,
+    [taskId, unitId, commentType, cleanBody],
+  );
+  const comment = rows[0];
+  if (!comment) throw new Error('Tarefa não encontrada.');
+  return comment;
 }
 
 export async function removeDirectTaskTemplateEverywhere(templateId: string): Promise<TaskTemplate> {

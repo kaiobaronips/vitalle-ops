@@ -2051,8 +2051,32 @@ def list_history(unit_id: str, start_date: date | None = None, end_date: date | 
                 (unit_id, dates),
             )
             task_rows = [dict(row) for row in cur.fetchall()]
+            task_ids = [str(task["id"]) for task in task_rows]
+            comments_by_task: dict[str, list[dict[str, Any]]] = {}
+            if task_ids:
+                cur.execute(
+                    """
+                    select
+                        c.id,
+                        c.daily_task_instance_id::text as daily_task_instance_id,
+                        c.user_id,
+                        c.comment_type,
+                        c.body,
+                        c.created_at,
+                        u.full_name as user_name
+                    from task_comments c
+                    left join users u on u.id = c.user_id
+                    where c.daily_task_instance_id::text = any(%s)
+                    order by c.created_at asc
+                    """,
+                    (task_ids,),
+                )
+                for comment in cur.fetchall():
+                    comment_row = dict(comment)
+                    comments_by_task.setdefault(str(comment_row["daily_task_instance_id"]), []).append(comment_row)
             tasks_by_key: dict[tuple[date, str], list[dict[str, Any]]] = {}
             for task in task_rows:
+                task["comments"] = comments_by_task.get(str(task["id"]), [])
                 tasks_by_key.setdefault((task["operational_date"], task["sector_id"]), []).append(task)
             sectors_by_date: dict[date, list[dict[str, Any]]] = {}
             for sector in sector_rows:

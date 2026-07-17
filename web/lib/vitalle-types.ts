@@ -326,6 +326,7 @@ export type HistoryItem = {
       blocker_reason?: string;
       blocker_details?: string;
       completion_comment?: string;
+      comments?: TaskComment[];
     }>;
   }>;
 };

@@ -1,5 +1,6 @@
 import { getVitalleAuthHeaders } from './vitalle-session';
 import {
+  addDirectTaskComment,
   canUseDirectDatabase,
   deleteDirectDailyTask,
   getDirectSectorRewardSummary,
@@ -22,6 +23,7 @@ import type {
   SectorDetail,
   SectorRewardDaySummary,
   SystemSetting,
+  TaskComment,
   TaskInstance,
   TaskTemplate,
 } from './vitalle-types';
@@ -325,6 +327,18 @@ export async function startVitalleTask(taskId: string): Promise<ApiMutationResul
 
 export async function completeVitalleTask(taskId: string, comment = ''): Promise<ApiMutationResult<TaskInstance>> {
   return mutate<TaskInstance>(`/v1/vitalle/tarefas/${taskId}/concluir`, 'POST', { comment });
+}
+
+export async function addVitalleTaskComment(taskId: string, comment: string): Promise<ApiMutationResult<TaskComment>> {
+  if (canUseDirectDatabase()) {
+    try {
+      const data = await addDirectTaskComment(taskId, comment, 'observation');
+      return { ok: true, status: 200, data, message: 'Observação salva.' };
+    } catch (error) {
+      console.warn('vitalle_direct_db_mutation_failed', '/v1/vitalle/tarefas/comentarios', error);
+    }
+  }
+  return mutate<TaskComment>(`/v1/vitalle/tarefas/${taskId}/comentarios`, 'POST', { comment });
 }
 
 export async function removeVitalleDailyTask(taskId: string): Promise<ApiMutationResult<TaskInstance>> {

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { completeTaskAction, startTaskAction } from '@/app/vitalle-actions';
+import { addTaskObservationAction, completeTaskAction, startTaskAction } from '@/app/vitalle-actions';
 import type { TaskInstance } from '@/lib/vitalle-types';
 
 type ColumnKind = 'todo' | 'doing' | 'finished' | 'custom';
@@ -74,6 +74,22 @@ function actionFormData(taskId: string, comment = '') {
   return formData;
 }
 
+function NoteIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[15px] w-[15px]">
+      <path
+        d="M5 5.5A2.5 2.5 0 0 1 7.5 3h9A2.5 2.5 0 0 1 19 5.5v8A2.5 2.5 0 0 1 16.5 16H11l-4.5 4v-4A2.5 2.5 0 0 1 4 13.5v-8Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.9"
+      />
+      <path d="M8 8h8M8 11.5h5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.9" />
+    </svg>
+  );
+}
+
 export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
   const router = useRouter();
   const [columns, setColumns] = useState<KanbanColumn[]>(defaultColumns);
@@ -87,9 +103,14 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
   const [draggedTaskId, setDraggedTaskId] = useState<string>('');
   const [message, setMessage] = useState('');
   const [celebration, setCelebration] = useState<CelebrationKind | null>(null);
+  const [noteTask, setNoteTask] = useState<TaskInstance | null>(null);
+  const [noteText, setNoteText] = useState('');
+  const [noteMessage, setNoteMessage] = useState('');
+  const [observedTaskIds, setObservedTaskIds] = useState<Set<string>>(new Set());
   const [now, setNow] = useState(() => new Date());
   const celebrationTimer = useRef<number | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isNotePending, startNoteTransition] = useTransition();
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(new Date()), 60000);
@@ -181,6 +202,41 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
     setNewColumnTitle('');
   }
 
+  function openNote(task: TaskInstance) {
+    setNoteTask(task);
+    setNoteText('');
+    setNoteMessage('');
+  }
+
+  function closeNote() {
+    if (isNotePending) return;
+    setNoteTask(null);
+    setNoteText('');
+    setNoteMessage('');
+  }
+
+  function saveNote() {
+    if (!noteTask) return;
+    const cleanNote = noteText.trim();
+    if (!cleanNote) {
+      setNoteMessage('Digite a observação da tarefa.');
+      return;
+    }
+    const formData = actionFormData(noteTask.id, cleanNote);
+    startNoteTransition(async () => {
+      const result = await addTaskObservationAction(formData);
+      if (!result.ok) {
+        setNoteMessage(result.message);
+        return;
+      }
+      setObservedTaskIds((current) => new Set(current).add(noteTask.id));
+      setNoteTask(null);
+      setNoteText('');
+      setNoteMessage('');
+      router.refresh();
+    });
+  }
+
   return (
     <section className="space-y-5">
       {celebration ? (
@@ -229,6 +285,63 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
       </div>
 
       {message ? <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{message}</p> : null}
+
+      {noteTask ? (
+        <div className="fixed inset-0 z-[120] grid place-items-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Observação da tarefa</p>
+                <h3 className="mt-1 text-lg font-semibold leading-snug text-slate-950">{noteTask.title_snapshot}</h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  {shortTime(noteTask.scheduled_start)} - {shortTime(noteTask.scheduled_due)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeNote}
+                disabled={isNotePending}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-slate-200 text-xl leading-none text-slate-600 transition hover:border-slate-400 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+                aria-label="Fechar observação"
+              >
+                ×
+              </button>
+            </div>
+
+            <label className="mt-5 grid gap-2 text-sm font-semibold text-slate-700">
+              <span>Digite a observação</span>
+              <textarea
+                value={noteText}
+                onChange={(event) => setNoteText(event.target.value)}
+                rows={6}
+                placeholder="Ex.: paciente pediu retorno, confirmou interesse, ficou de enviar documento..."
+                className="min-h-36 rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm leading-6 text-slate-950 outline-none transition focus:border-[var(--gold)]"
+              />
+            </label>
+
+            {noteMessage ? <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">{noteMessage}</p> : null}
+
+            <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={closeNote}
+                disabled={isNotePending}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={saveNote}
+                disabled={isNotePending}
+                className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isNotePending ? 'Salvando...' : 'Salvar observação'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="overflow-x-auto pb-3">
         <div className="grid min-h-[29rem] grid-flow-col auto-cols-[minmax(17rem,calc(100vw-2rem))] gap-3 sm:auto-cols-[19rem] lg:grid-flow-row lg:grid-cols-3 lg:auto-cols-auto">
@@ -292,7 +405,22 @@ export function SectorKanban({ tasks }: { tasks: TaskInstance[] }) {
                         <span>
                           {shortTime(task.scheduled_start)} - {shortTime(task.scheduled_due)}
                         </span>
-                        <span className={`rounded-full px-2.5 py-1 ${timingBadgeClass(task, now)}`}>{statusLabel(task)}</span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openNote(task)}
+                            className={`grid h-7 w-7 place-items-center rounded-full border transition ${
+                              observedTaskIds.has(task.id)
+                                ? 'border-[#c99e67] bg-[#f4eadb] text-[#14110d]'
+                                : 'border-[#ded8cf] bg-[#fbf9f5] text-slate-500 hover:border-[#c99e67] hover:text-[#14110d]'
+                            }`}
+                            aria-label={`Adicionar observação em ${task.title_snapshot}`}
+                            title="Adicionar observação"
+                          >
+                            <NoteIcon />
+                          </button>
+                          <span className={`rounded-full px-2.5 py-1 ${timingBadgeClass(task, now)}`}>{statusLabel(task)}</span>
+                        </div>
                       </div>
                     </div>
                   ))}
