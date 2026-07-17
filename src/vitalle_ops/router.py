@@ -356,6 +356,14 @@ def setores(principal: APIPrincipal = Depends(_principal_guard)):
         raise HTTPException(status_code=404, detail="Unit not found")
     sectors = list_sectors(scope["unit_id"])
     today = date_in_tz(scope["unit_timezone"])
+    sync_daily_operation(
+        scope["organization_id"],
+        scope["unit_id"],
+        today,
+        scope["unit_timezone"],
+        sync_source="api",
+        actor_user_id=_actor_user_id(principal, scope),
+    )
     tasks = list_daily_task_instances(scope["unit_id"], today)
     if scope["accessible_sector_ids"] and not scope["admin_like"]:
         tasks = [task for task in tasks if task["sector_id"] in scope["accessible_sector_ids"]]
@@ -380,6 +388,14 @@ def setor(slug: str, principal: APIPrincipal = Depends(_principal_guard)):
     if not sector:
         raise HTTPException(status_code=404, detail="Sector not found")
     today = date_in_tz(scope["unit_timezone"])
+    sync_daily_operation(
+        scope["organization_id"],
+        scope["unit_id"],
+        today,
+        scope["unit_timezone"],
+        sync_source="api",
+        actor_user_id=_actor_user_id(principal, scope),
+    )
     tasks = [task for task in list_daily_task_instances(scope["unit_id"], today) if task["sector_id"] == sector["id"]]
     summary = calculate_compliance(tasks)
     return _success(
