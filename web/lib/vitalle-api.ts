@@ -1,6 +1,5 @@
 import { getVitalleAuthHeaders } from './vitalle-session';
 import {
-  addDirectTaskComment,
   canUseDirectDatabase,
   deleteDirectDailyTask,
   getDirectSectorRewardSummary,
@@ -53,7 +52,7 @@ export type ApiMutationResult<T> = {
 async function headers(): Promise<Record<string, string>> {
   const base = await getVitalleAuthHeaders();
   const apiKey = process.env.VITALLE_API_KEY;
-  if (!base.Authorization && !base['X-Vitalle-Dev-Role'] && apiKey) {
+  if (!base.Authorization && base['X-Vitalle-Dev-Role'] && apiKey) {
     base['X-API-Key'] = apiKey;
   }
   return base;
@@ -330,14 +329,6 @@ export async function completeVitalleTask(taskId: string, comment = ''): Promise
 }
 
 export async function addVitalleTaskComment(taskId: string, comment: string): Promise<ApiMutationResult<TaskComment>> {
-  if (canUseDirectDatabase()) {
-    try {
-      const data = await addDirectTaskComment(taskId, comment, 'observation');
-      return { ok: true, status: 200, data, message: 'Observação salva.' };
-    } catch (error) {
-      console.warn('vitalle_direct_db_mutation_failed', '/v1/vitalle/tarefas/comentarios', error);
-    }
-  }
   return mutate<TaskComment>(`/v1/vitalle/tarefas/${taskId}/comentarios`, 'POST', { comment });
 }
 

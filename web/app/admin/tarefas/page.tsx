@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { OpsShell } from '@/components/vitalle/OpsShell';
 import { StatusPill } from '@/components/vitalle/VitalleCards';
 import { archiveTaskAction, activateTaskAction, duplicateTaskAction } from '@/app/vitalle-actions';
-import { getVitalleMe, getVitalleTaskTemplates } from '@/lib/vitalle-api';
+import { requireVitalleAdmin } from '@/lib/vitalle-access';
+import { getVitalleTaskTemplates } from '@/lib/vitalle-api';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,8 +36,8 @@ function TaskTemplateActions({ id, active }: { id: string; active?: boolean }) {
 }
 
 export default async function AdminTarefasPage() {
-  const [meResult, templatesResult] = await Promise.all([getVitalleMe(), getVitalleTaskTemplates()]);
-  const me = meResult.data;
+  const me = await requireVitalleAdmin();
+  const templatesResult = await getVitalleTaskTemplates();
   const templates = templatesResult.data.items ?? [];
 
   return (

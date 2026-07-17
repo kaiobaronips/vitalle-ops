@@ -2,13 +2,12 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { OpsShell } from '@/components/vitalle/OpsShell';
 import { StatusPill } from '@/components/vitalle/VitalleCards';
-import { getVitalleMe } from '@/lib/vitalle-api';
+import { requireVitalleSession } from '@/lib/vitalle-access';
 
 export const dynamic = 'force-dynamic';
 
 export default async function SetoresPage() {
-  const meResult = await getVitalleMe();
-  const me = meResult.data;
+  const me = await requireVitalleSession();
   if (me.admin_like) {
     redirect('/admin/setores');
   }

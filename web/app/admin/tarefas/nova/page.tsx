@@ -1,12 +1,13 @@
 import { OpsShell } from '@/components/vitalle/OpsShell';
 import { TaskTemplateForm } from '@/components/vitalle/VitalleForms';
-import { getVitalleMe, getVitalleSectors } from '@/lib/vitalle-api';
+import { requireVitalleAdmin } from '@/lib/vitalle-access';
+import { getVitalleSectors } from '@/lib/vitalle-api';
 
 export const dynamic = 'force-dynamic';
 
 export default async function NovaTarefaPage() {
-  const [meResult, sectorsResult] = await Promise.all([getVitalleMe(), getVitalleSectors()]);
-  const me = meResult.data;
+  const me = await requireVitalleAdmin();
+  const sectorsResult = await getVitalleSectors();
   const sectors = sectorsResult.data.items ?? [];
 
   return (

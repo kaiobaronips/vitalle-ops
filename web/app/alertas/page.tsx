@@ -1,7 +1,8 @@
 import { OpsShell } from '@/components/vitalle/OpsShell';
 import { AlertCard, StatusPill } from '@/components/vitalle/VitalleCards';
 import { resolveAlertAction } from '@/app/vitalle-actions';
-import { getVitalleAlerts, getVitalleMe } from '@/lib/vitalle-api';
+import { requireVitalleAdmin } from '@/lib/vitalle-access';
+import { getVitalleAlerts } from '@/lib/vitalle-api';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,8 +19,8 @@ function ResolveButton({ id }: { id: string }) {
 
 export default async function AlertasPage({ searchParams }: { searchParams?: Promise<{ status?: string }> }) {
   const params = (await searchParams) ?? {};
-  const [meResult, alertResult] = await Promise.all([getVitalleMe(), getVitalleAlerts(params.status)]);
-  const me = meResult.data;
+  const me = await requireVitalleAdmin();
+  const alertResult = await getVitalleAlerts(params.status);
   const alerts = alertResult.data.items ?? [];
 
   return (

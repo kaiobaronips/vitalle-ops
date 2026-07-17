@@ -193,10 +193,23 @@ def require_principal(
         if scheme.lower() == "bearer" and token:
             return _principal_from_bearer_token(token, config)
 
-    if config.admin_api_key and x_api_key and compare_digest(config.admin_api_key, x_api_key):
+    valid_api_key = bool(config.admin_api_key and x_api_key and compare_digest(config.admin_api_key, x_api_key))
+    if valid_api_key and x_vitalle_dev_role:
+        return APIPrincipal(
+            role=x_vitalle_dev_role,
+            user_id=x_vitalle_dev_user_id or "",
+            email=x_vitalle_dev_email or "",
+            auth_method="trusted_session",
+            organization_id=x_vitalle_dev_organization_id or "",
+            unit_id=x_vitalle_dev_unit_id or "",
+            sector_id=x_vitalle_dev_sector_id or "",
+            display_name=x_vitalle_dev_display_name or "",
+        )
+
+    if valid_api_key:
         return APIPrincipal(role="admin", auth_method="api_key")
 
-    if config.allow_insecure_development_auth:
+    if config.allow_insecure_development_auth and not config.is_production:
         return APIPrincipal(
             role=x_vitalle_dev_role or "admin",
             user_id=x_vitalle_dev_user_id or "",

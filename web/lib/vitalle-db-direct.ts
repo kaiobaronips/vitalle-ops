@@ -1,8 +1,9 @@
 import 'server-only';
 
+import { randomUUID } from 'node:crypto';
 import { Pool, type PoolClient } from 'pg';
 import { getVitalleDevSession } from './vitalle-session';
-import type { PageResponse, PrincipalContext, Sector, SectorRewardDaySummary, SystemSetting, TaskComment, TaskInstance, TaskTemplate } from './vitalle-types';
+import type { PageResponse, PrincipalContext, Sector, SectorRewardDaySummary, SystemSetting, TaskInstance, TaskTemplate } from './vitalle-types';
 
 const organizationId = 'vitalle-odontologia';
 const unitId = 'vitalle-main';
@@ -30,6 +31,13 @@ function getPool() {
   return pool;
 }
 
+async function requireDirectAdmin() {
+  const session = await getVitalleDevSession();
+  if (!session || !['admin', 'owner', 'manager', 'gestor'].includes(session.role.toLowerCase())) {
+    throw new Error('Acesso administrativo necessário.');
+  }
+}
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -40,7 +48,7 @@ function slugify(value: string) {
 }
 
 function idFrom(name: string) {
-  return `${slugify(name)}::${new Date().toISOString().replace(/\D/g, '').slice(0, 14)}`;
+  return `${slugify(name)}::${randomUUID()}`;
 }
 
 function dateOnly(value: unknown) {
@@ -119,28 +127,27 @@ export async function getDirectSettings(): Promise<PageResponse<SystemSetting>> 
 
 export async function getDirectMe(): Promise<PrincipalContext | null> {
   const session = await getVitalleDevSession();
-  if (!session && !process.env.VITALLE_API_KEY) {
-    return null;
-  }
-  const role = session?.role || 'admin';
+  if (!session) return null;
+  const role = session.role;
   const adminLike = ['admin', 'owner', 'manager', 'gestor'].includes(role.toLowerCase());
+  const operatorLike = ['operator', 'operador', 'ops'].includes(role.toLowerCase());
   const [sectors, settings] = await Promise.all([getDirectSectors(), getDirectSettings()]);
   return {
     principal: {
       role,
-      user_id: session?.user_id || '',
-      email: session?.email || '',
-      auth_method: session ? 'dev-db' : 'api-key-db',
-      organization_id: session?.organization_id || organizationId,
-      unit_id: session?.unit_id || unitId,
-      sector_id: session?.sector_id || '',
-      display_name: session?.display_name || 'Administrador Vitalle',
+      user_id: session.user_id,
+      email: session.email,
+      auth_method: 'trusted-session-db',
+      organization_id: session.organization_id,
+      unit_id: session.unit_id,
+      sector_id: session.sector_id,
+      display_name: session.display_name,
     },
-    organization_id: session?.organization_id || organizationId,
-    unit_id: session?.unit_id || unitId,
+    organization_id: session.organization_id,
+    unit_id: session.unit_id,
     role,
-    display_name: session?.display_name || 'Administrador Vitalle',
-    sector_ids: adminLike ? sectors.items.map((sector) => sector.id) : session?.sector_id ? [session.sector_id] : [],
+    display_name: session.display_name,
+    sector_ids: adminLike || operatorLike ? sectors.items.map((sector) => sector.id) : session.sector_id ? [session.sector_id] : [],
     admin_like: adminLike,
     timezone,
     sectors: sectors.items,
@@ -149,6 +156,7 @@ export async function getDirectMe(): Promise<PrincipalContext | null> {
 }
 
 export async function getDirectTaskTemplates(): Promise<PageResponse<TaskTemplate>> {
+  await requireDirectAdmin();
   const items = await query<TaskTemplate>(
     `
     select
@@ -212,6 +220,7 @@ export async function getDirectTaskTemplates(): Promise<PageResponse<TaskTemplat
 }
 
 export async function saveDirectSector(payload: Record<string, unknown>): Promise<Sector> {
+  await requireDirectAdmin();
   const name = String(payload.name || '').trim();
   if (!name) throw new Error('Nome do setor é obrigatório.');
   const id = String(payload.id || '') || idFrom(name);
@@ -252,9 +261,13 @@ export async function saveDirectSector(payload: Record<string, unknown>): Promis
 }
 
 export async function saveDirectTaskTemplate(payload: Record<string, unknown>): Promise<TaskTemplate> {
+  await requireDirectAdmin();
   const title = String(payload.title || '').trim();
   const sectorId = String(payload.sector_id || '').trim();
   if (!title || !sectorId) throw new Error('Setor e título são obrigatórios.');
+  const startTime = String(payload.start_time || '09:00');
+  const dueTime = String(payload.due_time || '09:30');
+  if (dueTime <= startTime) throw new Error('Horário do fim deve ser posterior ao horário de início.');
   const id = String(payload.id || '') || idFrom(title);
   const recurrence = (payload.recurrence_rule || {}) as Record<string, unknown>;
   const existing = await query<{ recurrence_rule_id?: string | null }>('select recurrence_rule_id from task_templates where id = $1 limit 1', [id]);
@@ -337,8 +350,8 @@ export async function saveDirectTaskTemplate(payload: Record<string, unknown>): 
         title,
         String(payload.description || ''),
         String(payload.task_type || 'STANDARD'),
-        String(payload.start_time || '09:00'),
-        String(payload.due_time || '09:30'),
+        startTime,
+        dueTime,
         String(payload.priority || 'NORMAL'),
         Boolean(payload.is_critical),
         payload.goal_target ? Number(payload.goal_target) : null,
@@ -364,6 +377,7 @@ export async function saveDirectTaskTemplate(payload: Record<string, unknown>): 
 }
 
 export async function deleteDirectDailyTask(taskId: string): Promise<TaskInstance> {
+  await requireDirectAdmin();
   const rows = await query<TaskInstance>(
     `
     delete from daily_task_instances
@@ -378,26 +392,8 @@ export async function deleteDirectDailyTask(taskId: string): Promise<TaskInstanc
   return task;
 }
 
-export async function addDirectTaskComment(taskId: string, body: string, commentType = 'observation'): Promise<TaskComment> {
-  const cleanBody = body.trim();
-  if (!cleanBody) throw new Error('Observação obrigatória.');
-  const rows = await query<TaskComment>(
-    `
-    insert into task_comments (daily_task_instance_id, user_id, comment_type, body)
-    select id, null, $3, $4
-    from daily_task_instances
-    where id::text = $1
-      and unit_id = $2
-    returning id, daily_task_instance_id, user_id, comment_type, body, created_at
-    `,
-    [taskId, unitId, commentType, cleanBody],
-  );
-  const comment = rows[0];
-  if (!comment) throw new Error('Tarefa não encontrada.');
-  return comment;
-}
-
 export async function removeDirectTaskTemplateEverywhere(templateId: string): Promise<TaskTemplate> {
+  await requireDirectAdmin();
   let removedTemplate: TaskTemplate | null = null;
   await withClient(async (client) => {
     const existing = await client.query<TaskTemplate>('select * from task_templates where id = $1 and unit_id = $2 limit 1', [templateId, unitId]);

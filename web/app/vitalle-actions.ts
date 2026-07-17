@@ -1,5 +1,6 @@
 'use server';
 
+import { timingSafeEqual } from 'node:crypto';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -23,8 +24,9 @@ import {
   saveVitalleUser,
   startVitalleTask,
   syncVitalleOperation,
+  getVitalleMe,
 } from '@/lib/vitalle-api';
-import { vitalleDevSessionCookieName, type VitalleDevSession } from '@/lib/vitalle-session';
+import { serializeVitalleDevSession, vitalleDevSessionCookieName, type VitalleDevSession } from '@/lib/vitalle-session';
 import { getSessionToken, refreshCookieName, sessionCookieName } from '@/lib/session';
 import { revokeSupabaseSession } from '@/lib/supabase-auth';
 
@@ -41,7 +43,7 @@ function text(formData: FormData, key: string): string {
   return String(formData.get(key) ?? '').trim();
 }
 
-function createDevSession(role: 'admin' | 'collaborator', userId: string, email: string, displayName: string): VitalleDevSession {
+function createDevSession(role: string, userId: string, email: string, displayName: string): VitalleDevSession {
   return {
     role,
     user_id: userId,
@@ -55,7 +57,7 @@ function createDevSession(role: 'admin' | 'collaborator', userId: string, email:
 
 async function persistDevSession(session: VitalleDevSession): Promise<void> {
   const cookieStore = await cookies();
-  cookieStore.set(vitalleDevSessionCookieName, JSON.stringify(session), {
+  cookieStore.set(vitalleDevSessionCookieName, serializeVitalleDevSession(session), {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
@@ -64,8 +66,26 @@ async function persistDevSession(session: VitalleDevSession): Promise<void> {
   });
 }
 
+function safeEqual(left: string, right: string) {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+async function authorizeAction(adminOnly = false): Promise<ActionState | null> {
+  const meResult = await getVitalleMe();
+  const me = meResult.data;
+  if (!me.role || !me.organization_id || !me.unit_id) {
+    return { ok: false, message: 'Sessão inválida ou expirada. Entre novamente.' };
+  }
+  if (adminOnly && !me.admin_like) {
+    return { ok: false, message: 'Acesso permitido somente ao administrador.' };
+  }
+  return null;
+}
+
 export async function opsLoginAction(): Promise<void> {
-  await persistDevSession(createDevSession('collaborator', 'demo-ops', 'ops@vitalle.local', 'Operador Vitalle'));
+  await persistDevSession(createDevSession('operator', 'demo-ops', 'ops@vitalle.local', 'Operador Vitalle'));
   redirect('/dashboard');
 }
 
@@ -79,7 +99,7 @@ export async function adminLoginAction(_previous: ActionState, formData: FormDat
   if (!password) {
     return { ok: false, message: 'Informe a senha.' };
   }
-  if (password !== expected) {
+  if (!safeEqual(password, expected)) {
     return { ok: false, message: 'Senha incorreta.' };
   }
 
@@ -103,6 +123,9 @@ async function revalidateVitalle() {
 }
 
 export async function devLoginAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  if (process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production') {
+    return { ok: false, message: 'Personas de desenvolvimento não estão disponíveis em produção.' };
+  }
   const persona = text(formData, 'persona');
   const devSessions: Record<string, VitalleDevSession> = {
     admin: {
@@ -115,7 +138,7 @@ export async function devLoginAction(_previous: ActionState, formData: FormData)
       sector_id: 'sector-avaliador',
     },
     ops: {
-      role: 'collaborator',
+      role: 'operator',
       user_id: 'demo-ops',
       email: 'ops@vitalle.local',
       display_name: 'Operador Vitalle',
@@ -191,6 +214,8 @@ export async function logoutAction(): Promise<void> {
 }
 
 export async function syncOperationAction(): Promise<ActionState> {
+  const unauthorized = await authorizeAction(true);
+  if (unauthorized) return unauthorized;
   const result = await syncVitalleOperation();
   if (!result.ok) {
     return { ok: false, message: result.message };
@@ -200,6 +225,8 @@ export async function syncOperationAction(): Promise<ActionState> {
 }
 
 export async function saveTaskTemplateAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const unauthorized = await authorizeAction(true);
+  if (unauthorized) return unauthorized;
   const subtasks = text(formData, 'subtasks')
     .split('\n')
     .map((item) => item.trim())
@@ -265,6 +292,8 @@ export async function saveTaskTemplateAction(_previous: ActionState, formData: F
 }
 
 export async function saveSectorAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const unauthorized = await authorizeAction(true);
+  if (unauthorized) return unauthorized;
   const result = await saveVitalleSector({
     id: text(formData, 'id') || undefined,
     name: text(formData, 'name'),
@@ -282,6 +311,8 @@ export async function saveSectorAction(_previous: ActionState, formData: FormDat
 }
 
 export async function saveUserAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const unauthorized = await authorizeAction(true);
+  if (unauthorized) return unauthorized;
   const result = await saveVitalleUser({
     id: text(formData, 'id') || undefined,
     email: text(formData, 'email'),
@@ -306,6 +337,8 @@ export async function saveUserAction(_previous: ActionState, formData: FormData)
 }
 
 export async function saveSettingAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const unauthorized = await authorizeAction(true);
+  if (unauthorized) return unauthorized;
   const raw = text(formData, 'value_json');
   let parsed: unknown = {};
   try {
@@ -323,6 +356,8 @@ export async function saveSettingAction(_previous: ActionState, formData: FormDa
 }
 
 export async function duplicateTaskAction(formData: FormData): Promise<ActionState> {
+  const unauthorized = await authorizeAction(true);
+  if (unauthorized) return unauthorized;
   const result = await duplicateVitalleTaskTemplate(text(formData, 'id'));
   if (!result.ok) return { ok: false, message: result.message };
   await revalidateVitalle();
@@ -330,6 +365,8 @@ export async function duplicateTaskAction(formData: FormData): Promise<ActionSta
 }
 
 export async function archiveTaskAction(formData: FormData): Promise<ActionState> {
+  const unauthorized = await authorizeAction(true);
+  if (unauthorized) return unauthorized;
   const result = await archiveVitalleTaskTemplate(text(formData, 'id'));
   if (!result.ok) return { ok: false, message: result.message };
   await revalidateVitalle();
@@ -337,6 +374,8 @@ export async function archiveTaskAction(formData: FormData): Promise<ActionState
 }
 
 export async function activateTaskAction(formData: FormData): Promise<ActionState> {
+  const unauthorized = await authorizeAction(true);
+  if (unauthorized) return unauthorized;
   const result = await activateVitalleTaskTemplate(text(formData, 'id'));
   if (!result.ok) return { ok: false, message: result.message };
   await revalidateVitalle();
@@ -344,6 +383,8 @@ export async function activateTaskAction(formData: FormData): Promise<ActionStat
 }
 
 export async function startTaskAction(formData: FormData): Promise<ActionState> {
+  const unauthorized = await authorizeAction();
+  if (unauthorized) return unauthorized;
   const result = await startVitalleTask(text(formData, 'id'));
   if (!result.ok) return { ok: false, message: result.message };
   await revalidateVitalle();
@@ -351,6 +392,8 @@ export async function startTaskAction(formData: FormData): Promise<ActionState> 
 }
 
 export async function completeTaskAction(formData: FormData): Promise<ActionState> {
+  const unauthorized = await authorizeAction();
+  if (unauthorized) return unauthorized;
   const result = await completeVitalleTask(text(formData, 'id'), text(formData, 'comment'));
   if (!result.ok) return { ok: false, message: result.message };
   await revalidateVitalle();
@@ -358,6 +401,8 @@ export async function completeTaskAction(formData: FormData): Promise<ActionStat
 }
 
 export async function addTaskObservationAction(formData: FormData): Promise<ActionState> {
+  const unauthorized = await authorizeAction();
+  if (unauthorized) return unauthorized;
   const comment = text(formData, 'comment');
   if (!comment) return { ok: false, message: 'Digite a observação da tarefa.' };
   const result = await addVitalleTaskComment(text(formData, 'id'), comment);
@@ -367,6 +412,8 @@ export async function addTaskObservationAction(formData: FormData): Promise<Acti
 }
 
 export async function removeDailyTaskAction(formData: FormData): Promise<ActionState> {
+  const unauthorized = await authorizeAction(true);
+  if (unauthorized) return unauthorized;
   const result = await removeVitalleDailyTask(text(formData, 'id'));
   if (!result.ok) return { ok: false, message: result.message };
   await revalidateVitalle();
@@ -374,6 +421,8 @@ export async function removeDailyTaskAction(formData: FormData): Promise<ActionS
 }
 
 export async function removeSectorTaskAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const unauthorized = await authorizeAction(true);
+  if (unauthorized) return unauthorized;
   const result = await removeVitalleTaskTemplateEverywhere(text(formData, 'id'));
   if (!result.ok) return { ok: false, message: result.message };
   await revalidateVitalle();
@@ -381,6 +430,8 @@ export async function removeSectorTaskAction(_previous: ActionState, formData: F
 }
 
 export async function blockTaskAction(formData: FormData): Promise<ActionState> {
+  const unauthorized = await authorizeAction();
+  if (unauthorized) return unauthorized;
   const result = await blockVitalleTask(text(formData, 'id'), text(formData, 'reason_type'), text(formData, 'details'));
   if (!result.ok) return { ok: false, message: result.message };
   await revalidateVitalle();
@@ -388,6 +439,8 @@ export async function blockTaskAction(formData: FormData): Promise<ActionState> 
 }
 
 export async function markNotApplicableAction(formData: FormData): Promise<ActionState> {
+  const unauthorized = await authorizeAction();
+  if (unauthorized) return unauthorized;
   const result = await markVitalleTaskNotApplicable(text(formData, 'id'), text(formData, 'comment'));
   if (!result.ok) return { ok: false, message: result.message };
   await revalidateVitalle();
@@ -395,6 +448,8 @@ export async function markNotApplicableAction(formData: FormData): Promise<Actio
 }
 
 export async function reopenTaskAction(formData: FormData): Promise<ActionState> {
+  const unauthorized = await authorizeAction(true);
+  if (unauthorized) return unauthorized;
   const result = await reopenVitalleTask(text(formData, 'id'), text(formData, 'comment'));
   if (!result.ok) return { ok: false, message: result.message };
   await revalidateVitalle();
@@ -402,6 +457,8 @@ export async function reopenTaskAction(formData: FormData): Promise<ActionState>
 }
 
 export async function addGoalAction(formData: FormData): Promise<ActionState> {
+  const unauthorized = await authorizeAction();
+  if (unauthorized) return unauthorized;
   const result = await addVitalleGoalEntry(text(formData, 'id'), Number(text(formData, 'quantity') || '0') || 0, text(formData, 'note'));
   if (!result.ok) return { ok: false, message: result.message };
   await revalidateVitalle();
@@ -409,6 +466,8 @@ export async function addGoalAction(formData: FormData): Promise<ActionState> {
 }
 
 export async function completeSubtaskAction(formData: FormData): Promise<ActionState> {
+  const unauthorized = await authorizeAction();
+  if (unauthorized) return unauthorized;
   const result = await completeVitalleSubtask(text(formData, 'task_id'), text(formData, 'subtask_id'), text(formData, 'comment'));
   if (!result.ok) return { ok: false, message: result.message };
   await revalidateVitalle();
@@ -416,6 +475,8 @@ export async function completeSubtaskAction(formData: FormData): Promise<ActionS
 }
 
 export async function resolveAlertAction(formData: FormData): Promise<ActionState> {
+  const unauthorized = await authorizeAction(true);
+  if (unauthorized) return unauthorized;
   const result = await resolveVitalleAlert(text(formData, 'id'));
   if (!result.ok) return { ok: false, message: result.message };
   await revalidateVitalle();

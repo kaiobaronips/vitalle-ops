@@ -2,7 +2,8 @@ import { notFound } from 'next/navigation';
 import { CandyRewardTracker, type CandyRewardDay } from '@/components/vitalle/CandyRewardTracker';
 import { OpsShell } from '@/components/vitalle/OpsShell';
 import { SectorKanban } from '@/components/vitalle/SectorKanban';
-import { getVitalleMe, getVitalleSector, getVitalleSectorRewardSummary } from '@/lib/vitalle-api';
+import { requireVitalleSession } from '@/lib/vitalle-access';
+import { getVitalleSector, getVitalleSectorRewardSummary } from '@/lib/vitalle-api';
 import type { SectorRewardDaySummary, TaskInstance } from '@/lib/vitalle-types';
 
 export const dynamic = 'force-dynamic';
@@ -94,8 +95,8 @@ function buildCandyRewardDays({
 
 export default async function SectorDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [meResult, sectorResult] = await Promise.all([getVitalleMe(), getVitalleSector(slug)]);
-  const me = meResult.data;
+  const me = await requireVitalleSession();
+  const sectorResult = await getVitalleSector(slug);
   const detail = sectorResult.data;
   if (!detail.sector?.id) notFound();
 

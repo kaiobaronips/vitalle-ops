@@ -8,7 +8,8 @@ import {
   markNotApplicableAction,
   startTaskAction,
 } from '@/app/vitalle-actions';
-import { getVitalleMe, getVitalleMeuDia } from '@/lib/vitalle-api';
+import { requireVitalleSession } from '@/lib/vitalle-access';
+import { getVitalleMeuDia } from '@/lib/vitalle-api';
 import type { TaskInstance } from '@/lib/vitalle-types';
 
 export const dynamic = 'force-dynamic';
@@ -84,8 +85,8 @@ export default async function MeuDiaPage({
   searchParams: Promise<{ view?: string }>;
 }) {
   const { view } = await searchParams;
-  const [meResult, dayResult] = await Promise.all([getVitalleMe(), getVitalleMeuDia()]);
-  const me = meResult.data;
+  const me = await requireVitalleSession();
+  const dayResult = await getVitalleMeuDia();
   const day = dayResult.data;
   const tabs = [
     { href: '/meu-dia?view=pipeline', label: 'Pipeline' },

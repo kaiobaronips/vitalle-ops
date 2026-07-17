@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { OpsShell } from '@/components/vitalle/OpsShell';
-import { getVitalleMe } from '@/lib/vitalle-api';
+import { requireVitalleAdmin } from '@/lib/vitalle-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,8 +20,7 @@ const options = [
 ];
 
 export default async function AdminConfiguracoesPage() {
-  const meResult = await getVitalleMe();
-  const me = meResult.data;
+  const me = await requireVitalleAdmin();
 
   return (
     <OpsShell principal={me} title="Configurações" subtitle="Adicione e remova opções operacionais do sistema.">

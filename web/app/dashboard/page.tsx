@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { OpsShell } from '@/components/vitalle/OpsShell';
-import { getVitalleMe, getVitalleSectors, getVitalleTaskTemplates } from '@/lib/vitalle-api';
+import { requireVitalleSession } from '@/lib/vitalle-access';
+import { getVitalleSectors, getVitalleTaskTemplates } from '@/lib/vitalle-api';
 import type { Sector, TaskTemplate } from '@/lib/vitalle-types';
 
 export const dynamic = 'force-dynamic';
@@ -36,20 +37,7 @@ function sectorTaskSummary(sectors: Sector[], tasks: TaskTemplate[]) {
 }
 
 export default async function DashboardPage() {
-  const [meResult, sectorsResult, tasksResult] = await Promise.all([
-    getVitalleMe(),
-    getVitalleSectors(),
-    getVitalleTaskTemplates(),
-  ]);
-  const me = meResult.data;
-  const sectors = sectorsResult.data.items ?? [];
-  const tasks = (tasksResult.data.items ?? [])
-    .filter((task) => task.active !== false && !task.archived_at)
-    .sort((a, b) => {
-      const left = `${shortTime(a.start_time)}-${a.sector_name || ''}-${a.title}`;
-      const right = `${shortTime(b.start_time)}-${b.sector_name || ''}-${b.title}`;
-      return left.localeCompare(right, 'pt-BR');
-    });
+  const me = await requireVitalleSession();
 
   if (!me.admin_like) {
     return (
@@ -65,6 +53,16 @@ export default async function DashboardPage() {
       </OpsShell>
     );
   }
+
+  const [sectorsResult, tasksResult] = await Promise.all([getVitalleSectors(), getVitalleTaskTemplates()]);
+  const sectors = sectorsResult.data.items ?? [];
+  const tasks = (tasksResult.data.items ?? [])
+    .filter((task) => task.active !== false && !task.archived_at)
+    .sort((a, b) => {
+      const left = `${shortTime(a.start_time)}-${a.sector_name || ''}-${a.title}`;
+      const right = `${shortTime(b.start_time)}-${b.sector_name || ''}-${b.title}`;
+      return left.localeCompare(right, 'pt-BR');
+    });
 
   const activeSectors = sectors.filter((sector) => sector.status !== 'inactive');
   const summary = sectorTaskSummary(activeSectors, tasks);

@@ -10,8 +10,8 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from vitalle_ops.support import load_local_env
-from vitalle_ops.store import (
+from vitalle_ops.support import load_local_env  # noqa: E402
+from vitalle_ops.store import (  # noqa: E402
     sync_daily_operation,
     upsert_organization,
     upsert_sector,

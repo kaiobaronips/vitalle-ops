@@ -1,16 +1,13 @@
 import { OpsShell } from '@/components/vitalle/OpsShell';
 import { AdminSectorTaskBoard } from '@/components/vitalle/AdminSectorTaskBoard';
-import { getVitalleMe, getVitalleSectors, getVitalleTaskTemplates } from '@/lib/vitalle-api';
+import { requireVitalleAdmin } from '@/lib/vitalle-access';
+import { getVitalleSectors, getVitalleTaskTemplates } from '@/lib/vitalle-api';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminSetoresPage() {
-  const [meResult, sectorsResult, tasksResult] = await Promise.all([
-    getVitalleMe(),
-    getVitalleSectors(),
-    getVitalleTaskTemplates(),
-  ]);
-  const me = meResult.data;
+  const me = await requireVitalleAdmin();
+  const [sectorsResult, tasksResult] = await Promise.all([getVitalleSectors(), getVitalleTaskTemplates()]);
   const sectors = sectorsResult.data.items ?? [];
   const tasks = tasksResult.data.items ?? [];
 

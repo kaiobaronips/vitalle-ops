@@ -1,11 +1,12 @@
 import { OpsShell } from '@/components/vitalle/OpsShell';
-import { getVitalleAudit, getVitalleMe } from '@/lib/vitalle-api';
+import { requireVitalleAdmin } from '@/lib/vitalle-access';
+import { getVitalleAudit } from '@/lib/vitalle-api';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AuditoriaPage() {
-  const [meResult, auditResult] = await Promise.all([getVitalleMe(), getVitalleAudit()]);
-  const me = meResult.data;
+  const me = await requireVitalleAdmin();
+  const auditResult = await getVitalleAudit();
   const events = auditResult.data.items ?? [];
 
   return (

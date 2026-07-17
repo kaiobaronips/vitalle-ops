@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import re
-from datetime import date, datetime, time
-from typing import Any, Iterable, Optional
+import unicodedata
+from datetime import date, datetime, timedelta, time
+from typing import Any
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field, model_validator
 
 from vitalle_ops.auth import APIPrincipal, require_principal
 from vitalle_ops.domain import bucket_tasks, calculate_compliance, date_in_tz, now_in_tz, sector_health_status
@@ -28,7 +30,6 @@ from vitalle_ops.store import (
     get_user_context,
     list_alerts,
     list_audit_events,
-    list_daily_operation_tasks_for_date,
     list_daily_reports,
     list_daily_task_instances,
     list_history,
@@ -78,7 +79,8 @@ def _page(items: list[dict[str, Any]], page: int, limit: int, total: int) -> dic
 
 
 def _slugify(value: str) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+    normalized = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+    slug = re.sub(r"[^a-z0-9]+", "-", normalized.lower()).strip("-")
     return slug or "item"
 
 
@@ -86,9 +88,18 @@ def _is_admin_like(principal: APIPrincipal) -> bool:
     return principal.is_admin or principal.role.lower() in {"owner", "admin", "manager", "gestor"}
 
 
+def _is_operator(principal: APIPrincipal) -> bool:
+    return principal.role.lower() in {"operator", "operador", "ops"}
+
+
 def _resolve_scope(principal: APIPrincipal) -> dict[str, Any]:
-    defaults = get_scope_defaults()
     user_context = get_user_context(principal.user_id) if principal.user_id else {}
+    has_complete_user_scope = bool(
+        user_context.get("organization_id")
+        and user_context.get("unit_id")
+        and (user_context.get("unit_timezone") or user_context.get("organization_timezone"))
+    )
+    defaults = {} if has_complete_user_scope else get_scope_defaults()
     organization_id = principal.organization_id or user_context.get("organization_id") or defaults.get("organization_id", "")
     unit_id = principal.unit_id or user_context.get("unit_id") or defaults.get("unit_id", "")
     sector_id = principal.sector_id or user_context.get("sector_id") or ""
@@ -98,9 +109,13 @@ def _resolve_scope(principal: APIPrincipal) -> dict[str, Any]:
     role = principal.role or user_context.get("role") or "collaborator"
     accessible_sector_ids = []
     sectors = []
-    if _is_admin_like(principal):
+    if _is_admin_like(principal) or _is_operator(principal):
         sectors = list_sectors(unit_id) if unit_id else []
-        accessible_sector_ids = [sector["id"] for sector in sectors]
+        accessible_sector_ids = [
+            sector["id"]
+            for sector in sectors
+            if _is_admin_like(principal) or str(sector.get("status") or "active").lower() == "active"
+        ]
     elif principal.user_id:
         assignments = list_user_sector_assignments(principal.user_id)
         accessible_sector_ids = [assignment["sector_id"] for assignment in assignments]
@@ -123,16 +138,14 @@ def _resolve_scope(principal: APIPrincipal) -> dict[str, Any]:
 
 
 def _filter_tasks(summary: dict[str, Any], sector_ids: list[str], timezone_name: str) -> dict[str, Any]:
-    tasks = summary.get("tasks", [])
-    if sector_ids:
-        tasks = [task for task in tasks if task.get("sector_id") in sector_ids]
+    tasks = [task for task in summary.get("tasks", []) if task.get("sector_id") in sector_ids]
     buckets = bucket_tasks(tasks, now_in_tz(timezone_name))
-    sectors = summary.get("sectors", [])
-    if sector_ids:
-        sectors = [sector for sector in sectors if sector.get("id") in sector_ids]
-    alerts = summary.get("alerts", [])
-    if sector_ids:
-        alerts = [alert for alert in alerts if alert.get("sector_id") in sector_ids or not alert.get("sector_id")]
+    sectors = [sector for sector in summary.get("sectors", []) if sector.get("id") in sector_ids]
+    alerts = (
+        [alert for alert in summary.get("alerts", []) if alert.get("sector_id") in sector_ids or not alert.get("sector_id")]
+        if sector_ids
+        else []
+    )
     compliance = calculate_compliance(tasks)
     now = now_in_tz(timezone_name)
     sector_payload = []
@@ -160,6 +173,35 @@ def _filter_tasks(summary: dict[str, Any], sector_ids: list[str], timezone_name:
         "alerts": alerts,
         "compliance": compliance,
     }
+
+
+def _ensure_daily_operation(scope: dict[str, Any], operational_date: date, actor_user_id: str | None = None) -> None:
+    if get_daily_operation(scope["unit_id"], operational_date):
+        return
+    sync_daily_operation(
+        scope["organization_id"],
+        scope["unit_id"],
+        operational_date,
+        scope["unit_timezone"],
+        sync_source="api",
+        actor_user_id=actor_user_id,
+    )
+
+
+def _require_task_access(task_id: str, scope: dict[str, Any]) -> dict[str, Any]:
+    task = get_daily_task_instance(task_id)
+    if not task or task.get("unit_id") != scope["unit_id"]:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if task.get("sector_id") not in scope["accessible_sector_ids"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    return task
+
+
+def _require_template_access(template_id: str, scope: dict[str, Any]) -> dict[str, Any]:
+    template = get_task_template(template_id)
+    if not template or template.get("unit_id") != scope["unit_id"]:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return template
 
 
 def _task_detail(task: dict[str, Any]) -> dict[str, Any]:
@@ -216,6 +258,12 @@ class TaskTemplateInput(BaseModel):
     archived_at: datetime | None = None
     recurrence_rule: RecurrenceRuleInput = Field(default_factory=RecurrenceRuleInput)
     subtasks: list[TaskTemplateSubtaskInput] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_schedule(self) -> "TaskTemplateInput":
+        if self.due_time <= self.start_time:
+            raise ValueError("Horário do fim deve ser posterior ao horário de início")
+        return self
 
 
 class SectorInput(BaseModel):
@@ -277,6 +325,13 @@ def _actor_user_id(principal: APIPrincipal, scope: dict[str, Any] | None = None)
 @router.get("/me")
 def me(principal: APIPrincipal = Depends(_principal_guard)):
     scope = _resolve_scope(principal)
+    sectors = scope["sectors"]
+    if not sectors and scope["unit_id"] and scope["accessible_sector_ids"]:
+        sectors = [
+            sector
+            for sector in list_sectors(scope["unit_id"])
+            if sector["id"] in scope["accessible_sector_ids"]
+        ]
     return _success(
         {
             "principal": principal.__dict__,
@@ -287,7 +342,7 @@ def me(principal: APIPrincipal = Depends(_principal_guard)):
             "sector_ids": scope["accessible_sector_ids"],
             "admin_like": scope["admin_like"],
             "timezone": scope["unit_timezone"],
-            "sectors": scope["sectors"] or (list_sectors(scope["unit_id"]) if scope["unit_id"] else []),
+            "sectors": sectors,
             "settings": list_system_settings(scope["unit_id"]) if scope["unit_id"] else [],
         }
     )
@@ -313,6 +368,7 @@ def meu_dia(principal: APIPrincipal = Depends(_principal_guard)):
     if not scope["unit_id"]:
         raise HTTPException(status_code=404, detail="Unit not found")
     operational_date = date_in_tz(scope["unit_timezone"])
+    _ensure_daily_operation(scope, operational_date, _actor_user_id(principal, scope))
     summary = get_daily_operation_summary(scope["unit_id"], operational_date, scope["unit_timezone"])
     filtered = _filter_tasks(summary, scope["accessible_sector_ids"], scope["unit_timezone"])
     tasks = filtered["tasks"]
@@ -335,6 +391,8 @@ def operacao(principal: APIPrincipal = Depends(_principal_guard)):
 @router.post("/operacao/sincronizar")
 def sincronizar_operacao(principal: APIPrincipal = Depends(_principal_guard)):
     scope = _resolve_scope(principal)
+    if not scope["admin_like"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
     if not scope["unit_id"]:
         raise HTTPException(status_code=404, detail="Unit not found")
     today = date_in_tz(scope["unit_timezone"])
@@ -354,19 +412,11 @@ def setores(principal: APIPrincipal = Depends(_principal_guard)):
     scope = _resolve_scope(principal)
     if not scope["unit_id"]:
         raise HTTPException(status_code=404, detail="Unit not found")
-    sectors = list_sectors(scope["unit_id"])
+    sectors = [sector for sector in list_sectors(scope["unit_id"]) if sector["id"] in scope["accessible_sector_ids"]]
     today = date_in_tz(scope["unit_timezone"])
-    sync_daily_operation(
-        scope["organization_id"],
-        scope["unit_id"],
-        today,
-        scope["unit_timezone"],
-        sync_source="api",
-        actor_user_id=_actor_user_id(principal, scope),
-    )
+    _ensure_daily_operation(scope, today, _actor_user_id(principal, scope))
     tasks = list_daily_task_instances(scope["unit_id"], today)
-    if scope["accessible_sector_ids"] and not scope["admin_like"]:
-        tasks = [task for task in tasks if task["sector_id"] in scope["accessible_sector_ids"]]
+    tasks = [task for task in tasks if task["sector_id"] in scope["accessible_sector_ids"]]
     sector_payload = []
     by_sector: dict[str, list[dict[str, Any]]] = {}
     for task in tasks:
@@ -384,18 +434,15 @@ def setor(slug: str, principal: APIPrincipal = Depends(_principal_guard)):
     scope = _resolve_scope(principal)
     if not scope["unit_id"]:
         raise HTTPException(status_code=404, detail="Unit not found")
-    sector = get_sector_by_slug(scope["unit_id"], slug)
+    sector = next((item for item in scope["sectors"] if item.get("slug") == slug), None)
+    if not sector:
+        sector = get_sector_by_slug(scope["unit_id"], slug)
     if not sector:
         raise HTTPException(status_code=404, detail="Sector not found")
+    if sector["id"] not in scope["accessible_sector_ids"]:
+        raise HTTPException(status_code=403, detail="Access denied")
     today = date_in_tz(scope["unit_timezone"])
-    sync_daily_operation(
-        scope["organization_id"],
-        scope["unit_id"],
-        today,
-        scope["unit_timezone"],
-        sync_source="api",
-        actor_user_id=_actor_user_id(principal, scope),
-    )
+    _ensure_daily_operation(scope, today, _actor_user_id(principal, scope))
     tasks = [task for task in list_daily_task_instances(scope["unit_id"], today) if task["sector_id"] == sector["id"]]
     summary = calculate_compliance(tasks)
     return _success(
@@ -413,9 +460,8 @@ def alertas(status: str | None = Query(default=None), principal: APIPrincipal = 
     scope = _resolve_scope(principal)
     if not scope["unit_id"]:
         raise HTTPException(status_code=404, detail="Unit not found")
-    alerts = list_alerts(scope["unit_id"], status=status, limit=200)
-    if scope["accessible_sector_ids"] and not scope["admin_like"]:
-        alerts = [alert for alert in alerts if alert.get("sector_id") in scope["accessible_sector_ids"] or not alert.get("sector_id")]
+    alerts = list_alerts(scope["unit_id"], status=status, limit=200) if scope["accessible_sector_ids"] else []
+    alerts = [alert for alert in alerts if alert.get("sector_id") in scope["accessible_sector_ids"] or not alert.get("sector_id")]
     return _success({"items": alerts})
 
 
@@ -426,15 +472,25 @@ def historico(
     principal: APIPrincipal = Depends(_principal_guard),
 ):
     scope = _resolve_scope(principal)
+    if not scope["admin_like"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
     if not scope["unit_id"]:
         raise HTTPException(status_code=404, detail="Unit not found")
-    history = list_history(scope["unit_id"], start_date=start_date, end_date=end_date, limit=60)
+    today = date_in_tz(scope["unit_timezone"])
+    history = list_history(
+        scope["unit_id"],
+        start_date=start_date or (today - timedelta(days=7)),
+        end_date=end_date or today,
+        limit=60,
+    )
     return _success({"items": history})
 
 
 @router.get("/relatorios")
 def relatorios(principal: APIPrincipal = Depends(_principal_guard)):
     scope = _resolve_scope(principal)
+    if not scope["admin_like"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
     if not scope["unit_id"]:
         raise HTTPException(status_code=404, detail="Unit not found")
     return _success({"items": list_daily_reports(scope["unit_id"], limit=30)})
@@ -443,6 +499,8 @@ def relatorios(principal: APIPrincipal = Depends(_principal_guard)):
 @router.get("/auditoria")
 def auditoria(principal: APIPrincipal = Depends(_principal_guard)):
     scope = _resolve_scope(principal)
+    if not scope["admin_like"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
     if not scope["unit_id"]:
         raise HTTPException(status_code=404, detail="Unit not found")
     return _success({"items": list_audit_events(scope["unit_id"], limit=100)})
@@ -461,9 +519,7 @@ def admin_tarefa(template_id: str, principal: APIPrincipal = Depends(_principal_
     scope = _resolve_scope(principal)
     if not _is_admin_like(principal):
         raise HTTPException(status_code=403, detail="Admin access required")
-    template = get_task_template(template_id)
-    if not template:
-        raise HTTPException(status_code=404, detail="Template not found")
+    template = _require_template_access(template_id, scope)
     return _success(template)
 
 
@@ -472,7 +528,11 @@ def admin_salvar_tarefa(payload: TaskTemplateInput, principal: APIPrincipal = De
     scope = _resolve_scope(principal)
     if not _is_admin_like(principal):
         raise HTTPException(status_code=403, detail="Admin access required")
-    template_id = payload.id or f"{_slugify(payload.title)}::{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+    if payload.sector_id not in scope["accessible_sector_ids"]:
+        raise HTTPException(status_code=400, detail="Invalid sector")
+    template_id = payload.id or f"{_slugify(payload.title)}::{uuid4().hex}"
+    if payload.id:
+        _require_template_access(payload.id, scope)
     actor_user_id = _actor_user_id(principal, scope)
     template = upsert_task_template(
         {
@@ -509,9 +569,11 @@ def admin_salvar_tarefa(payload: TaskTemplateInput, principal: APIPrincipal = De
 
 @router.post("/admin/tarefas/{template_id}/duplicar")
 def admin_duplicar_tarefa(template_id: str, principal: APIPrincipal = Depends(_principal_guard)):
+    scope = _resolve_scope(principal)
     if not _is_admin_like(principal):
         raise HTTPException(status_code=403, detail="Admin access required")
-    duplicated = duplicate_task_template(template_id, actor_user_id=_actor_user_id(principal))
+    _require_template_access(template_id, scope)
+    duplicated = duplicate_task_template(template_id, actor_user_id=_actor_user_id(principal, scope))
     if not duplicated:
         raise HTTPException(status_code=404, detail="Template not found")
     return _success(duplicated)
@@ -519,9 +581,11 @@ def admin_duplicar_tarefa(template_id: str, principal: APIPrincipal = Depends(_p
 
 @router.post("/admin/tarefas/{template_id}/arquivar")
 def admin_arquivar_tarefa(template_id: str, principal: APIPrincipal = Depends(_principal_guard)):
+    scope = _resolve_scope(principal)
     if not _is_admin_like(principal):
         raise HTTPException(status_code=403, detail="Admin access required")
-    archived = archive_task_template(template_id, active=False, actor_user_id=_actor_user_id(principal))
+    _require_template_access(template_id, scope)
+    archived = archive_task_template(template_id, active=False, actor_user_id=_actor_user_id(principal, scope))
     if not archived:
         raise HTTPException(status_code=404, detail="Template not found")
     return _success(archived)
@@ -540,9 +604,11 @@ def admin_remover_tarefa(template_id: str, principal: APIPrincipal = Depends(_pr
 
 @router.post("/admin/tarefas/{template_id}/ativar")
 def admin_ativar_tarefa(template_id: str, principal: APIPrincipal = Depends(_principal_guard)):
+    scope = _resolve_scope(principal)
     if not _is_admin_like(principal):
         raise HTTPException(status_code=403, detail="Admin access required")
-    activated = archive_task_template(template_id, active=True, actor_user_id=_actor_user_id(principal))
+    _require_template_access(template_id, scope)
+    activated = archive_task_template(template_id, active=True, actor_user_id=_actor_user_id(principal, scope))
     if not activated:
         raise HTTPException(status_code=404, detail="Template not found")
     return _success(activated)
@@ -561,7 +627,7 @@ def admin_salvar_setor(payload: SectorInput, principal: APIPrincipal = Depends(_
     scope = _resolve_scope(principal)
     if not _is_admin_like(principal):
         raise HTTPException(status_code=403, detail="Admin access required")
-    sector_id = payload.id or f"{_slugify(payload.name)}::{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+    sector_id = payload.id or f"{_slugify(payload.name)}::{uuid4().hex}"
     sector = upsert_sector(
         {
             "id": sector_id,
@@ -594,7 +660,7 @@ def admin_salvar_usuario(payload: UserInput, principal: APIPrincipal = Depends(_
     scope = _resolve_scope(principal)
     if not _is_admin_like(principal):
         raise HTTPException(status_code=403, detail="Admin access required")
-    user_id = payload.id or f"{_slugify(payload.email)}::{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+    user_id = payload.id or f"{_slugify(payload.email)}::{uuid4().hex}"
     user = upsert_user(
         {
             "id": user_id,
@@ -652,33 +718,21 @@ def admin_salvar_configuracao(payload: dict[str, Any], principal: APIPrincipal =
 @router.get("/tarefas/{task_id}")
 def tarefa(task_id: str, principal: APIPrincipal = Depends(_principal_guard)):
     scope = _resolve_scope(principal)
-    task = get_daily_task_instance(task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    if not scope["admin_like"] and scope["accessible_sector_ids"] and task["sector_id"] not in scope["accessible_sector_ids"]:
-        raise HTTPException(status_code=403, detail="Access denied")
+    task = _require_task_access(task_id, scope)
     return _success(_task_detail(task))
 
 
 @router.post("/tarefas/{task_id}/iniciar")
 def iniciar_tarefa(task_id: str, principal: APIPrincipal = Depends(_principal_guard)):
     scope = _resolve_scope(principal)
-    task = get_daily_task_instance(task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    if not scope["admin_like"] and scope["accessible_sector_ids"] and task["sector_id"] not in scope["accessible_sector_ids"]:
-        raise HTTPException(status_code=403, detail="Access denied")
+    _require_task_access(task_id, scope)
     return _success(start_task(task_id, actor_user_id=_actor_user_id(principal, scope)))
 
 
 @router.post("/tarefas/{task_id}/concluir")
 def concluir_tarefa(task_id: str, payload: TaskActionInput, principal: APIPrincipal = Depends(_principal_guard)):
     scope = _resolve_scope(principal)
-    task = get_daily_task_instance(task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    if not scope["admin_like"] and scope["accessible_sector_ids"] and task["sector_id"] not in scope["accessible_sector_ids"]:
-        raise HTTPException(status_code=403, detail="Access denied")
+    _require_task_access(task_id, scope)
     actor_user_id = _actor_user_id(principal, scope)
     if payload.comment:
         add_task_comment(task_id, payload.comment, actor_user_id=actor_user_id, comment_type="completion")
@@ -690,11 +744,7 @@ def concluir_tarefa(task_id: str, payload: TaskActionInput, principal: APIPrinci
 @router.post("/tarefas/{task_id}/comentarios")
 def comentar_tarefa(task_id: str, payload: TaskActionInput, principal: APIPrincipal = Depends(_principal_guard)):
     scope = _resolve_scope(principal)
-    task = get_daily_task_instance(task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    if not scope["admin_like"] and scope["accessible_sector_ids"] and task["sector_id"] not in scope["accessible_sector_ids"]:
-        raise HTTPException(status_code=403, detail="Access denied")
+    _require_task_access(task_id, scope)
     body = (payload.comment or payload.note or payload.details or "").strip()
     if not body:
         raise HTTPException(status_code=400, detail="Comentário obrigatório")
@@ -705,11 +755,7 @@ def comentar_tarefa(task_id: str, payload: TaskActionInput, principal: APIPrinci
 @router.post("/tarefas/{task_id}/bloquear")
 def bloquear_tarefa(task_id: str, payload: TaskActionInput, principal: APIPrincipal = Depends(_principal_guard)):
     scope = _resolve_scope(principal)
-    task = get_daily_task_instance(task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    if not scope["admin_like"] and scope["accessible_sector_ids"] and task["sector_id"] not in scope["accessible_sector_ids"]:
-        raise HTTPException(status_code=403, detail="Access denied")
+    _require_task_access(task_id, scope)
     actor_user_id = _actor_user_id(principal, scope)
     result = block_task(task_id, payload.reason_type or "Outro", payload.details or payload.comment, actor_user_id=actor_user_id)
     refresh_alerts(scope["unit_id"], date_in_tz(scope["unit_timezone"]), scope["unit_timezone"], actor_user_id=actor_user_id)
@@ -719,11 +765,7 @@ def bloquear_tarefa(task_id: str, payload: TaskActionInput, principal: APIPrinci
 @router.post("/tarefas/{task_id}/nao-aplicavel")
 def tarefa_nao_aplicavel(task_id: str, payload: TaskActionInput, principal: APIPrincipal = Depends(_principal_guard)):
     scope = _resolve_scope(principal)
-    task = get_daily_task_instance(task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    if not scope["admin_like"] and scope["accessible_sector_ids"] and task["sector_id"] not in scope["accessible_sector_ids"]:
-        raise HTTPException(status_code=403, detail="Access denied")
+    _require_task_access(task_id, scope)
     actor_user_id = _actor_user_id(principal, scope)
     updated = mark_not_applicable(task_id, payload.comment or "Não aplicável hoje", actor_user_id=actor_user_id)
     refresh_alerts(scope["unit_id"], date_in_tz(scope["unit_timezone"]), scope["unit_timezone"], actor_user_id=actor_user_id)
@@ -733,11 +775,9 @@ def tarefa_nao_aplicavel(task_id: str, payload: TaskActionInput, principal: APIP
 @router.post("/tarefas/{task_id}/reabrir")
 def reabrir_tarefa(task_id: str, payload: TaskActionInput, principal: APIPrincipal = Depends(_principal_guard)):
     scope = _resolve_scope(principal)
-    task = get_daily_task_instance(task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
     if not scope["admin_like"]:
         raise HTTPException(status_code=403, detail="Admin access required")
+    _require_task_access(task_id, scope)
     actor_user_id = _actor_user_id(principal, scope)
     updated = reopen_task(task_id, reason=payload.comment or payload.details, actor_user_id=actor_user_id)
     refresh_alerts(scope["unit_id"], date_in_tz(scope["unit_timezone"]), scope["unit_timezone"], actor_user_id=actor_user_id)
@@ -747,11 +787,7 @@ def reabrir_tarefa(task_id: str, payload: TaskActionInput, principal: APIPrincip
 @router.post("/tarefas/{task_id}/meta")
 def registrar_meta(task_id: str, payload: TaskActionInput, principal: APIPrincipal = Depends(_principal_guard)):
     scope = _resolve_scope(principal)
-    task = get_daily_task_instance(task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    if not scope["admin_like"] and scope["accessible_sector_ids"] and task["sector_id"] not in scope["accessible_sector_ids"]:
-        raise HTTPException(status_code=403, detail="Access denied")
+    _require_task_access(task_id, scope)
     if payload.quantity <= 0:
         raise HTTPException(status_code=400, detail="quantity must be positive")
     actor_user_id = _actor_user_id(principal, scope)
@@ -763,11 +799,7 @@ def registrar_meta(task_id: str, payload: TaskActionInput, principal: APIPrincip
 @router.post("/tarefas/{task_id}/evidencia")
 def registrar_evidencia(task_id: str, payload: dict[str, Any], principal: APIPrincipal = Depends(_principal_guard)):
     scope = _resolve_scope(principal)
-    task = get_daily_task_instance(task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    if not scope["admin_like"] and scope["accessible_sector_ids"] and task["sector_id"] not in scope["accessible_sector_ids"]:
-        raise HTTPException(status_code=403, detail="Access denied")
+    _require_task_access(task_id, scope)
     evidence = add_task_evidence(
         task_id,
         payload.get("evidence_type", "text"),
@@ -781,19 +813,21 @@ def registrar_evidencia(task_id: str, payload: dict[str, Any], principal: APIPri
 @router.post("/tarefas/{task_id}/subtarefas/{subtask_id}/concluir")
 def concluir_subtarefa(task_id: str, subtask_id: str, payload: TaskActionInput, principal: APIPrincipal = Depends(_principal_guard)):
     scope = _resolve_scope(principal)
-    task = get_daily_task_instance(task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    if not scope["admin_like"] and scope["accessible_sector_ids"] and task["sector_id"] not in scope["accessible_sector_ids"]:
-        raise HTTPException(status_code=403, detail="Access denied")
+    _require_task_access(task_id, scope)
     actor_user_id = _actor_user_id(principal, scope)
-    updated = complete_subtask(subtask_id, actor_user_id=actor_user_id, notes=payload.comment)
+    updated = complete_subtask(subtask_id, task_id=task_id, actor_user_id=actor_user_id, notes=payload.comment)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Subtask not found")
     refresh_task_runtime_state(scope["unit_id"], date_in_tz(scope["unit_timezone"]), scope["unit_timezone"], actor_user_id=actor_user_id)
     return _success(updated)
 
 
 @router.post("/alertas/{alert_id}/resolver")
 def resolver_alerta(alert_id: str, principal: APIPrincipal = Depends(_principal_guard)):
-    if not _is_admin_like(principal):
+    scope = _resolve_scope(principal)
+    if not scope["admin_like"]:
         raise HTTPException(status_code=403, detail="Admin access required")
-    return _success(resolve_alert(alert_id, actor_user_id=_actor_user_id(principal)))
+    resolved = resolve_alert(alert_id, scope["unit_id"], actor_user_id=_actor_user_id(principal, scope))
+    if not resolved:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return _success(resolved)

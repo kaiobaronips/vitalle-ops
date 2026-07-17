@@ -1,12 +1,13 @@
 import { OpsShell } from '@/components/vitalle/OpsShell';
 import { UserForm } from '@/components/vitalle/VitalleForms';
-import { getVitalleMe, getVitalleSectors, getVitalleUsers } from '@/lib/vitalle-api';
+import { requireVitalleAdmin } from '@/lib/vitalle-access';
+import { getVitalleSectors, getVitalleUsers } from '@/lib/vitalle-api';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminUsuariosPage() {
-  const [meResult, sectorsResult, usersResult] = await Promise.all([getVitalleMe(), getVitalleSectors(), getVitalleUsers()]);
-  const me = meResult.data;
+  const me = await requireVitalleAdmin();
+  const [sectorsResult, usersResult] = await Promise.all([getVitalleSectors(), getVitalleUsers()]);
   const sectors = sectorsResult.data.items ?? [];
   const users = usersResult.data.items ?? [];
 

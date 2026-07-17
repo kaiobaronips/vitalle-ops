@@ -1,5 +1,6 @@
 import { OpsShell } from '@/components/vitalle/OpsShell';
-import { getVitalleHistory, getVitalleMe } from '@/lib/vitalle-api';
+import { requireVitalleAdmin } from '@/lib/vitalle-access';
+import { getVitalleHistory } from '@/lib/vitalle-api';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,8 +23,8 @@ function statusLabel(value: string) {
 
 export default async function HistoricoPage({ searchParams }: { searchParams?: Promise<{ start_date?: string; end_date?: string }> }) {
   const params = (await searchParams) ?? {};
-  const [meResult, historyResult] = await Promise.all([getVitalleMe(), getVitalleHistory(params.start_date, params.end_date)]);
-  const me = meResult.data;
+  const me = await requireVitalleAdmin();
+  const historyResult = await getVitalleHistory(params.start_date, params.end_date);
   const items = historyResult.data.items ?? [];
 
   return (

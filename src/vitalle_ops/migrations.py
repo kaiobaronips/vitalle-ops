@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import re
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,10 @@ def _migration_files() -> list[Path]:
 
 def _checksum(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _supabase_migration_name(filename: str) -> str:
+    return re.sub(r"^\d+_", "", Path(filename).stem)
 
 
 def ensure_migration_table() -> None:
@@ -47,14 +52,26 @@ def applied_migrations() -> dict[str, str]:
             return {row["version"]: row["checksum"] for row in cur.fetchall()}
 
 
+def supabase_applied_migrations() -> set[str]:
+    with get_connection() as connection:
+        with connection.cursor() as cur:
+            cur.execute("select to_regclass('supabase_migrations.schema_migrations') as relation")
+            if not (cur.fetchone() or {}).get("relation"):
+                return set()
+            cur.execute("select name from supabase_migrations.schema_migrations")
+            return {str(row["name"]) for row in cur.fetchall()}
+
+
 def migration_status() -> list[dict[str, Any]]:
     applied = applied_migrations()
+    supabase_applied = supabase_applied_migrations()
     return [
         {
             "version": path.name,
             "checksum": _checksum(path),
-            "applied": path.name in applied,
+            "applied": path.name in applied or _supabase_migration_name(path.name) in supabase_applied,
             "checksum_matches": path.name not in applied or path.name in applied and applied[path.name] == _checksum(path),
+            "source": "vitalle" if path.name in applied else "supabase" if _supabase_migration_name(path.name) in supabase_applied else None,
         }
         for path in _migration_files()
     ]
@@ -62,6 +79,7 @@ def migration_status() -> list[dict[str, Any]]:
 
 def apply_pending_migrations() -> list[str]:
     applied = applied_migrations()
+    supabase_applied = supabase_applied_migrations()
     completed = []
     for path in _migration_files():
         checksum = _checksum(path)
@@ -69,6 +87,8 @@ def apply_pending_migrations() -> list[str]:
         if existing_checksum:
             if existing_checksum != checksum:
                 raise RuntimeError(f"Migration checksum changed after apply: {path.name}")
+            continue
+        if _supabase_migration_name(path.name) in supabase_applied:
             continue
         with get_connection() as connection:
             with connection.cursor() as cur:

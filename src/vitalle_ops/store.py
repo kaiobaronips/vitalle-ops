@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
-from datetime import date, datetime, time, timedelta, timezone
-from typing import Any, Iterable
+from datetime import date, datetime, time, timedelta
+from typing import Any
 from uuid import uuid4
 
 from vitalle_ops.db import get_connection
@@ -24,7 +23,6 @@ from vitalle_ops.domain import (
     recurrence_matches,
     sector_health_status,
     task_status_snapshot,
-    tz_for_name,
 )
 
 
@@ -1117,8 +1115,6 @@ def sync_daily_operation(
     operation = upsert_daily_operation(organization_id, unit_id, operational_date, timezone_name, sync_source)
     templates = list_task_templates(unit_id)
     subtasks_by_template = list_task_template_subtasks_for_templates([template["id"] for template in templates])
-    now = now_in_tz(timezone_name)
-
     with get_connection() as connection:
         with connection.cursor() as cur:
             for template in templates:
@@ -1396,7 +1392,7 @@ def list_alerts(unit_id: str, status: str | None = None, limit: int = 50) -> lis
             return [dict(row) for row in cur.fetchall()]
 
 
-def resolve_alert(alert_id: str, actor_user_id: str | None = None) -> dict[str, Any]:
+def resolve_alert(alert_id: str, unit_id: str, actor_user_id: str | None = None) -> dict[str, Any]:
     with get_connection() as connection:
         with connection.cursor() as cur:
             cur.execute(
@@ -1407,9 +1403,10 @@ def resolve_alert(alert_id: str, actor_user_id: str | None = None) -> dict[str, 
                     resolved_by = %s,
                     updated_at = now()
                 where id::text = %s
+                  and unit_id = %s
                 returning *
                 """,
-                (actor_user_id, alert_id),
+                (actor_user_id, alert_id, unit_id),
             )
             return dict(cur.fetchone() or {})
 
@@ -1515,7 +1512,12 @@ def add_goal_entry(task_id: str, quantity: int, note: str, actor_user_id: str | 
             return {"entry": goal, "task": updated}
 
 
-def complete_subtask(subtask_id: str, actor_user_id: str | None = None, notes: str = "") -> dict[str, Any]:
+def complete_subtask(
+    subtask_id: str,
+    task_id: str,
+    actor_user_id: str | None = None,
+    notes: str = "",
+) -> dict[str, Any]:
     with get_connection() as connection:
         with connection.cursor() as cur:
             cur.execute(
@@ -1527,9 +1529,10 @@ def complete_subtask(subtask_id: str, actor_user_id: str | None = None, notes: s
                     notes = case when %s = '' then notes else %s end,
                     updated_at = now()
                 where id::text = %s
+                  and daily_task_instance_id::text = %s
                 returning *
                 """,
-                (actor_user_id, notes, notes, subtask_id),
+                (actor_user_id, notes, notes, subtask_id, task_id),
             )
             subtask = dict(cur.fetchone() or {})
             if not subtask:

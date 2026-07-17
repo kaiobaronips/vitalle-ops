@@ -1,12 +1,13 @@
 import { OpsShell } from '@/components/vitalle/OpsShell';
 import { MetricCard } from '@/components/vitalle/VitalleCards';
-import { getVitalleDashboard, getVitalleMe, getVitalleReports } from '@/lib/vitalle-api';
+import { requireVitalleAdmin } from '@/lib/vitalle-access';
+import { getVitalleDashboard, getVitalleReports } from '@/lib/vitalle-api';
 
 export const dynamic = 'force-dynamic';
 
 export default async function RelatoriosPage() {
-  const [meResult, dashboardResult, reportsResult] = await Promise.all([getVitalleMe(), getVitalleDashboard(), getVitalleReports()]);
-  const me = meResult.data;
+  const me = await requireVitalleAdmin();
+  const [dashboardResult, reportsResult] = await Promise.all([getVitalleDashboard(), getVitalleReports()]);
   const dashboard = dashboardResult.data;
   const reports = reportsResult.data.items ?? [];
 

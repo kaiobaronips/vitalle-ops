@@ -18,3 +18,7 @@ class APIConfig:
     auth_jwks_json: Optional[str] = field(default_factory=lambda: os.getenv("VITALLE_AUTH_JWKS") or os.getenv("SUPABASE_JWT_JWKS") or os.getenv("SUPABASE_JWKS") or None)
     supabase_url: str = field(default_factory=lambda: os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL") or "")
     supabase_anon_key: str = field(default_factory=lambda: os.getenv("SUPABASE_ANON_KEY") or os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY") or "")
+    is_production: bool = field(
+        default_factory=lambda: (os.getenv("VERCEL_ENV") or os.getenv("VITALLE_ENV") or os.getenv("ENVIRONMENT") or "").lower()
+        == "production"
+    )

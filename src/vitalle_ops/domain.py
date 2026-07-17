@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timezone
 from math import ceil
 from typing import Any, Iterable
 from zoneinfo import ZoneInfo
@@ -158,13 +158,17 @@ def recurrence_matches(rule: dict[str, Any], operational_date: date) -> bool:
         month_days = set(int(day) for day in rule.get("month_days") or [])
         weeks_of_month = set(int(week) for week in rule.get("weeks_of_month") or [])
         weekdays = set(int(day) for day in rule.get("weekdays") or [])
+        if start_date:
+            elapsed_months = (operational_date.year - start_date.year) * 12 + operational_date.month - start_date.month
+            if elapsed_months < 0 or elapsed_months % interval_value != 0:
+                return False
         if month_days and operational_date.day in month_days:
             return True
         if weeks_of_month and weekdays:
             return week_of_month(operational_date) in weeks_of_month and normalize_weekday(operational_date) in weekdays
         if not start_date:
             return False
-        return operational_date.day == start_date.day and ((operational_date.month - start_date.month) % interval_value == 0)
+        return operational_date.day == start_date.day
 
     if recurrence_type == "CUSTOM":
         payload = rule.get("custom_rule_json") or {}

@@ -1,14 +1,15 @@
 import { notFound } from 'next/navigation';
 import { OpsShell } from '@/components/vitalle/OpsShell';
 import { TaskTemplateForm } from '@/components/vitalle/VitalleForms';
-import { getVitalleMe, getVitalleSectors, getVitalleTaskTemplate } from '@/lib/vitalle-api';
+import { requireVitalleAdmin } from '@/lib/vitalle-access';
+import { getVitalleSectors, getVitalleTaskTemplate } from '@/lib/vitalle-api';
 
 export const dynamic = 'force-dynamic';
 
 export default async function EditarTarefaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [meResult, sectorsResult, templateResult] = await Promise.all([getVitalleMe(), getVitalleSectors(), getVitalleTaskTemplate(id)]);
-  const me = meResult.data;
+  const me = await requireVitalleAdmin();
+  const [sectorsResult, templateResult] = await Promise.all([getVitalleSectors(), getVitalleTaskTemplate(id)]);
   const sectors = sectorsResult.data.items ?? [];
   const template = templateResult.data;
   if (!template.id) notFound();

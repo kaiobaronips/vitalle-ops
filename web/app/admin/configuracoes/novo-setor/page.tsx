@@ -1,13 +1,12 @@
 import Link from 'next/link';
 import { OpsShell } from '@/components/vitalle/OpsShell';
 import { SectorForm } from '@/components/vitalle/VitalleForms';
-import { getVitalleMe } from '@/lib/vitalle-api';
+import { requireVitalleAdmin } from '@/lib/vitalle-access';
 
 export const dynamic = 'force-dynamic';
 
 export default async function NovoSetorConfiguracoesPage() {
-  const meResult = await getVitalleMe();
-  const me = meResult.data;
+  const me = await requireVitalleAdmin();
 
   return (
     <OpsShell principal={me} title="Configurações" subtitle="Cadastre um novo setor operacional.">
